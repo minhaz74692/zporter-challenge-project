@@ -1,0 +1,5 @@
+packages:
+  - 'apps/api'
+  - 'apps/web'
+  - 'packages/*'
+# apps/player is a Flutter project and is intentionally NOT a pnpm workspace member.

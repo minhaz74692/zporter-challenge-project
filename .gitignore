@@ -1,0 +1,38 @@
+# OS
+.DS_Store
+
+# Node
+node_modules/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+*serviceAccount*.json
+firebase-adminsdk*.json
+
+# Build output
+dist/
+.next/
+out/
+build/
+coverage/
+*.tsbuildinfo
+
+# Next.js
+apps/web/next-env.d.ts
+
+# Flutter (see apps/player/.gitignore for the full list)
+apps/player/.dart_tool/
+apps/player/build/
+apps/player/.flutter-plugins-dependencies
+
+# IDE
+.idea/
+*.iml
+
+# Local-only planning notes (not part of the delivered repo)
+project-plan.md

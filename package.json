@@ -1,0 +1,17 @@
+{
+  "name": "zporter-challenges",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Zporter Challenges prototype — Flutter player app, NestJS API, Next.js creator web.",
+  "packageManager": "pnpm@9.12.3",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev:api": "pnpm --filter @zporter/api start:dev",
+    "dev:web": "pnpm --filter @zporter/web dev",
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "lint": "pnpm -r lint"
+  }
+}
