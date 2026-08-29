@@ -1,5 +1,5 @@
 import type { Firestore } from 'firebase-admin/firestore';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { HealthService } from './health.service.js';
 
 function dbReturning(get: () => Promise<unknown>): Firestore {
