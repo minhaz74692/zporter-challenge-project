@@ -1,5 +1,6 @@
 import type {
   ChallengeStatus,
+  ChallengeVisibility,
   IsoDateTime,
   ResultType,
   ScoringDirection,
@@ -26,6 +27,8 @@ export interface Challenge {
   startAt: IsoDateTime;
   deadline: IsoDateTime;
   status: ChallengeStatus;
+  /** Defaults to `invited`; `global` challenges are admin-created. */
+  visibility: ChallengeVisibility;
   createdBy: string;
   participantCount: number;
   createdAt: IsoDateTime;
@@ -43,12 +46,21 @@ export interface CreateChallengeRequest {
   reward: ChallengeReward;
   startAt: IsoDateTime;
   deadline: IsoDateTime;
+  /** Defaults to `invited`. Only `admin` may create `global`. */
+  visibility?: ChallengeVisibility;
   invitedUserIds?: string[];
+  /** Fans out to every member of the team at launch. */
+  invitedTeamId?: string;
 }
 
-/** Body of `POST /challenges/:id/invite`. */
+/**
+ * Body of `POST /challenges/:id/invite`. Supply `userIds`, `teamId`, or both —
+ * a `teamId` is expanded to its members server-side and merged with `userIds`
+ * (deduplicated). At least one must be present.
+ */
 export interface InviteRequest {
-  userIds: string[];
+  userIds?: string[];
+  teamId?: string;
 }
 
 /**

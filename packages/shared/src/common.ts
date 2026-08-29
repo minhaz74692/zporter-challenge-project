@@ -8,6 +8,12 @@
 /** ISO-8601 datetime string, e.g. `2026-08-30T12:00:00.000Z`. */
 export type IsoDateTime = string;
 
+/**
+ * `player` — mobile participant. `coach` — creates challenges for their own
+ * squad/invitees. `admin` — CMS super-user, creates platform-wide "global"
+ * challenges. In this slice `coach` and `admin` share creator permissions;
+ * `admin` is seed-only (no self-signup).
+ */
 export type UserRole = 'player' | 'coach' | 'admin';
 
 export type ResultType = 'count' | 'time' | 'boolean' | 'score' | 'text' | 'proof';
@@ -15,6 +21,12 @@ export type ResultType = 'count' | 'time' | 'boolean' | 'score' | 'text' | 'proo
 export type ScoringDirection = 'higher_better' | 'lower_better';
 
 export type ChallengeStatus = 'draft' | 'active' | 'ended';
+
+/**
+ * `invited` — only invited players see it (coach flow). `global` — every player
+ * sees it in their New tab, no invite needed (admin CMS "global" push).
+ */
+export type ChallengeVisibility = 'invited' | 'global';
 
 /** Player-facing list tabs — see the category→query mapping in §6. */
 export type ChallengeCategory = 'new' | 'active' | 'done' | 'declined' | 'ended';

@@ -36,6 +36,21 @@ export class EnvironmentVariables {
   @IsNotEmpty()
   FIREBASE_PROJECT_ID!: string;
 
+  @IsString()
+  @IsNotEmpty()
+  JWT_ACCESS_SECRET!: string;
+
+  /** `expiresIn` string for the access token (e.g. `15m`, `1h`). */
+  @IsString()
+  @IsOptional()
+  JWT_ACCESS_TTL: string = '15m';
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @IsOptional()
+  JWT_REFRESH_TTL_DAYS: number = 14;
+
   /** Absolute/relative path to a service-account JSON key (local dev). */
   @IsString()
   @IsOptional()

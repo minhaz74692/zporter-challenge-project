@@ -12,9 +12,17 @@ export interface FirebaseConfig {
   serviceAccountKey?: string;
 }
 
+export interface AuthConfig {
+  accessSecret: string;
+  /** `expiresIn` string passed to `JwtService.sign` (e.g. `15m`). */
+  accessTtl: string;
+  refreshTtlDays: number;
+}
+
 export interface Configuration {
   app: AppConfig;
   firebase: FirebaseConfig;
+  auth: AuthConfig;
 }
 
 /**
@@ -35,6 +43,11 @@ export function configuration(): Configuration {
       projectId: process.env.FIREBASE_PROJECT_ID as string,
       credentialsPath: process.env.GOOGLE_APPLICATION_CREDENTIALS,
       serviceAccountKey: process.env.FIREBASE_SERVICE_ACCOUNT_KEY,
+    },
+    auth: {
+      accessSecret: process.env.JWT_ACCESS_SECRET as string,
+      accessTtl: process.env.JWT_ACCESS_TTL ?? '15m',
+      refreshTtlDays: parseInt(process.env.JWT_REFRESH_TTL_DAYS ?? '14', 10),
     },
   };
 }
