@@ -8,7 +8,6 @@ export interface AppConfig {
 
 export interface FirebaseConfig {
   projectId: string;
-  storageBucket?: string;
   credentialsPath?: string;
   serviceAccountKey?: string;
 }
@@ -34,7 +33,6 @@ export function configuration(): Configuration {
     },
     firebase: {
       projectId: process.env.FIREBASE_PROJECT_ID as string,
-      storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
       credentialsPath: process.env.GOOGLE_APPLICATION_CREDENTIALS,
       serviceAccountKey: process.env.FIREBASE_SERVICE_ACCOUNT_KEY,
     },

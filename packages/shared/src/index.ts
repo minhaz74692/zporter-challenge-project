@@ -1,29 +1,18 @@
 /**
- * Shared domain types for Zporter Challenges.
+ * `@zporter/shared` — the wire contract shared by `@zporter/api` and
+ * `@zporter/web` (and mirrored by the Flutter models).
  *
- * These mirror the Firestore data model in `project-plan.md` §6 and the API
- * contract in §7. `@zporter/api` is the source of truth (NestJS DTOs +
- * Swagger); `@zporter/web` consumes these types and the generated client.
- *
- * Fleshed out in Phase 0 ("Shared types package") — placeholder for now.
+ * These types mirror the Firestore data model in `project-plan.md` §6 and the
+ * API contract in §7. The NestJS DTOs + Swagger spec are the source of truth;
+ * these interfaces must stay in sync with them. Pure types only — no runtime
+ * code, so consumers import with `import type`.
  */
 
-export type UserRole = 'player' | 'coach' | 'admin';
-
-export type ResultType =
-  | 'count'
-  | 'time'
-  | 'boolean'
-  | 'score'
-  | 'text'
-  | 'proof';
-
-export type ScoringDirection = 'higher_better' | 'lower_better';
-
-export type ChallengeStatus = 'draft' | 'active' | 'ended';
-
-export type InviteState = 'invited' | 'accepted' | 'declined';
-
-export type ResultState = 'pending' | 'submitted' | 'completed';
-
-export {};
+export * from './common.js';
+export * from './auth.js';
+export * from './badge.js';
+export * from './template.js';
+export * from './challenge.js';
+export * from './participant.js';
+export * from './result.js';
+export * from './notification.js';

@@ -36,10 +36,6 @@ export class EnvironmentVariables {
   @IsNotEmpty()
   FIREBASE_PROJECT_ID!: string;
 
-  @IsString()
-  @IsOptional()
-  FIREBASE_STORAGE_BUCKET?: string;
-
   /** Absolute/relative path to a service-account JSON key (local dev). */
   @IsString()
   @IsOptional()

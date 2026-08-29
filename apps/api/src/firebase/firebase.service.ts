@@ -11,15 +11,14 @@ import {
 } from 'firebase-admin/app';
 import { getFirestore, type Firestore } from 'firebase-admin/firestore';
 import { getMessaging, type Messaging } from 'firebase-admin/messaging';
-import { getStorage, type Storage } from 'firebase-admin/storage';
 import type { FirebaseConfig } from '../config/configuration.js';
 import { FIREBASE_APP_NAME } from './firebase.constants.js';
 
 /**
  * The one and only place `firebase-admin` is touched. Owns the Admin app
- * lifecycle and hands out `firestore` / `storage` / `messaging`. Anything that
- * needs Firebase depends on this service (or the `FIRESTORE` token), never on
- * the SDK directly.
+ * lifecycle and hands out `firestore` / `messaging` (Cloud Storage is out of
+ * scope for this slice). Anything that needs Firebase depends on this service
+ * (or the `FIRESTORE` token), never on the SDK directly.
  *
  * The Admin app is created in the constructor (a cheap, synchronous, no-network
  * call) so it is ready for any provider that consumes it during module init.
@@ -37,7 +36,6 @@ export class FirebaseService implements OnModuleDestroy {
         {
           credential: this.resolveCredential(firebase),
           projectId: firebase.projectId,
-          storageBucket: firebase.storageBucket,
         },
         FIREBASE_APP_NAME,
       );
@@ -52,10 +50,6 @@ export class FirebaseService implements OnModuleDestroy {
 
   get firestore(): Firestore {
     return getFirestore(this.app);
-  }
-
-  get storage(): Storage {
-    return getStorage(this.app);
   }
 
   get messaging(): Messaging {

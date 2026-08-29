@@ -18,7 +18,6 @@ vi.mock('firebase-admin/app', () => ({
 vi.mock('firebase-admin/firestore', () => ({
   getFirestore: vi.fn(() => ({ settings: firestoreSettings })),
 }));
-vi.mock('firebase-admin/storage', () => ({ getStorage: vi.fn(() => ({})) }));
 vi.mock('firebase-admin/messaging', () => ({ getMessaging: vi.fn(() => ({})) }));
 
 const { FirebaseService } = await import('./firebase.service.js');
