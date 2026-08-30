@@ -1,7 +1,8 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import type { SignupRequest } from '@zporter/shared';
 import * as argon2 from 'argon2';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { StorageService } from '../storage/storage.service.js';
 import type { NewUser, UserRecord } from './entities/user.entity.js';
 import { UsersService } from './users.service.js';
 import type { UsersRepository } from './users.repository.js';
@@ -27,6 +28,16 @@ class FakeUsersRepository {
     return record;
   }
 
+  async setAvatarUrl(id: string, avatarUrl: string): Promise<void> {
+    const row = this.rows.get(id);
+    if (row) row.avatarUrl = avatarUrl;
+  }
+
+  async clearAvatarUrl(id: string): Promise<void> {
+    const row = this.rows.get(id);
+    if (row) delete row.avatarUrl;
+  }
+
   async search(): Promise<UserRecord[]> {
     return [...this.rows.values()];
   }
@@ -41,9 +52,17 @@ const signup: SignupRequest = {
 
 describe('UsersService', () => {
   let service: UsersService;
+  let storage: { uploadImage: ReturnType<typeof vi.fn>; deleteObject: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
-    service = new UsersService(new FakeUsersRepository() as unknown as UsersRepository);
+    storage = {
+      uploadImage: vi.fn().mockResolvedValue('https://img.test/avatars/u_1'),
+      deleteObject: vi.fn().mockResolvedValue(undefined),
+    };
+    service = new UsersService(
+      new FakeUsersRepository() as unknown as UsersRepository,
+      storage as unknown as StorageService,
+    );
   });
 
   it('normalises email, trims name, and stores an argon2id hash (not the password)', async () => {
@@ -71,5 +90,34 @@ describe('UsersService', () => {
 
   it('getById throws NotFound for an unknown id', async () => {
     await expect(service.getById('nope')).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('setAvatar uploads to a per-user path and stores the returned URL', async () => {
+    const user = await service.create(signup);
+    const updated = await service.setAvatar(user.id, {
+      buffer: Buffer.from('img'),
+      mimetype: 'image/png',
+    });
+
+    expect(storage.uploadImage).toHaveBeenCalledWith(
+      expect.objectContaining({ path: `avatars/${user.id}`, mimeType: 'image/png' }),
+    );
+    expect(updated.avatarUrl).toBe('https://img.test/avatars/u_1');
+  });
+
+  it('clearAvatar deletes the object and drops the URL', async () => {
+    const user = await service.create(signup);
+    await service.setAvatar(user.id, { buffer: Buffer.from('x'), mimetype: 'image/png' });
+
+    const cleared = await service.clearAvatar(user.id);
+    expect(storage.deleteObject).toHaveBeenCalledWith(`avatars/${user.id}`);
+    expect(cleared.avatarUrl).toBeUndefined();
+  });
+
+  it('setAvatar rejects an unknown user before touching storage', async () => {
+    await expect(
+      service.setAvatar('ghost', { buffer: Buffer.from('x'), mimetype: 'image/png' }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(storage.uploadImage).not.toHaveBeenCalled();
   });
 });

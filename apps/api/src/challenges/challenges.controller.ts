@@ -1,5 +1,17 @@
-import { Body, Controller, Get, HttpCode, Param, Post, Query } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Param,
+  Post,
+  Query,
+  UploadedFile,
+  UseInterceptors,
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiBearerAuth, ApiBody, ApiConsumes, ApiTags } from '@nestjs/swagger';
+import { parseImageUpload } from '../storage/image-upload.pipe.js';
 import type {
   Challenge,
   ChallengeDetail,
@@ -9,6 +21,7 @@ import type {
 import { CurrentUser } from '../auth/decorators/current-user.decorator.js';
 import { Roles } from '../auth/decorators/roles.decorator.js';
 import type { AuthenticatedUser } from '../auth/types.js';
+import { SubmitResultDto } from '../results/dto/submit-result.dto.js';
 import { ChallengesService } from './challenges.service.js';
 import { CreateChallengeDto } from './dto/create-challenge.dto.js';
 import { InviteDto } from './dto/invite.dto.js';
@@ -74,6 +87,16 @@ export class ChallengesController {
     return this.challenges.decline(id, user);
   }
 
+  @Post(':id/results')
+  @HttpCode(200)
+  submitResult(
+    @Param('id') id: string,
+    @Body() dto: SubmitResultDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<Participant> {
+    return this.challenges.submitResult(id, user, dto);
+  }
+
   @Post(':id/invite')
   @Roles('coach', 'admin')
   invite(
@@ -82,5 +105,21 @@ export class ChallengesController {
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<{ invited: number }> {
     return this.challenges.invite(id, dto, user);
+  }
+
+  /** Upload / replace the cover image (owner only; JPEG/PNG/WebP, ≤5 MB). */
+  @Post(':id/cover')
+  @Roles('coach', 'admin')
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: { type: 'object', properties: { file: { type: 'string', format: 'binary' } } },
+  })
+  setCover(
+    @Param('id') id: string,
+    @UploadedFile(parseImageUpload) file: Express.Multer.File,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<Challenge> {
+    return this.challenges.setCover(id, user, file);
   }
 }

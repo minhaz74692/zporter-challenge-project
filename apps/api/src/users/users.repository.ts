@@ -1,9 +1,10 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type {
-  CollectionReference,
-  DocumentData,
-  Firestore,
-  QueryDocumentSnapshot,
+import {
+  FieldValue,
+  type CollectionReference,
+  type DocumentData,
+  type Firestore,
+  type QueryDocumentSnapshot,
 } from 'firebase-admin/firestore';
 import { FIRESTORE } from '../firebase/firebase.constants.js';
 import type { NewUser, UserRecord } from './entities/user.entity.js';
@@ -31,6 +32,14 @@ export class UsersRepository {
   async findByEmail(email: string): Promise<UserRecord | null> {
     const snap = await this.col.where('email', '==', email).limit(1).get();
     return snap.empty ? null : this.fromDoc(snap.docs[0]);
+  }
+
+  async setAvatarUrl(id: string, avatarUrl: string): Promise<void> {
+    await this.col.doc(id).set({ avatarUrl }, { merge: true });
+  }
+
+  async clearAvatarUrl(id: string): Promise<void> {
+    await this.col.doc(id).update({ avatarUrl: FieldValue.delete() });
   }
 
   async create(data: NewUser): Promise<UserRecord> {
@@ -71,6 +80,12 @@ export class UsersRepository {
       passwordHash: data.passwordHash,
       displayName: data.displayName,
       role: data.role,
+      handle: data.handle,
+      avatarUrl: data.avatarUrl,
+      country: data.country,
+      city: data.city,
+      club: data.club,
+      position: data.position,
       createdAt: data.createdAt,
     };
   }

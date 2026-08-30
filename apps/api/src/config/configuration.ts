@@ -10,6 +10,8 @@ export interface FirebaseConfig {
   projectId: string;
   credentialsPath?: string;
   serviceAccountKey?: string;
+  /** Cloud Storage bucket, e.g. `zporter-challenge-app.firebasestorage.app`. */
+  storageBucket?: string;
 }
 
 export interface AuthConfig {
@@ -43,6 +45,7 @@ export function configuration(): Configuration {
       projectId: process.env.FIREBASE_PROJECT_ID as string,
       credentialsPath: process.env.GOOGLE_APPLICATION_CREDENTIALS,
       serviceAccountKey: process.env.FIREBASE_SERVICE_ACCOUNT_KEY,
+      storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
     },
     auth: {
       accessSecret: process.env.JWT_ACCESS_SECRET as string,

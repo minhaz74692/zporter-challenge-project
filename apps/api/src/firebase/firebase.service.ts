@@ -11,14 +11,15 @@ import {
 } from 'firebase-admin/app';
 import { getFirestore, type Firestore } from 'firebase-admin/firestore';
 import { getMessaging, type Messaging } from 'firebase-admin/messaging';
+import { getStorage, type Storage } from 'firebase-admin/storage';
 import type { FirebaseConfig } from '../config/configuration.js';
 import { FIREBASE_APP_NAME } from './firebase.constants.js';
 
 /**
  * The one and only place `firebase-admin` is touched. Owns the Admin app
- * lifecycle and hands out `firestore` / `messaging` (Cloud Storage is out of
- * scope for this slice). Anything that needs Firebase depends on this service
- * (or the `FIRESTORE` token), never on the SDK directly.
+ * lifecycle and hands out `firestore` / `messaging` / `storage`. Anything that
+ * needs Firebase depends on this service (or the `FIRESTORE` token), never on
+ * the SDK directly.
  *
  * The Admin app is created in the constructor (a cheap, synchronous, no-network
  * call) so it is ready for any provider that consumes it during module init.
@@ -27,15 +28,18 @@ import { FIREBASE_APP_NAME } from './firebase.constants.js';
 export class FirebaseService implements OnModuleDestroy {
   private readonly logger = new Logger(FirebaseService.name);
   private readonly app: App;
+  private readonly storageBucket?: string;
 
   constructor(config: ConfigService) {
     const firebase = config.getOrThrow<FirebaseConfig>('firebase');
+    this.storageBucket = firebase.storageBucket;
     this.app =
       getApps().find((a) => a.name === FIREBASE_APP_NAME) ??
       initializeApp(
         {
           credential: this.resolveCredential(firebase),
           projectId: firebase.projectId,
+          storageBucket: firebase.storageBucket,
         },
         FIREBASE_APP_NAME,
       );
@@ -54,6 +58,15 @@ export class FirebaseService implements OnModuleDestroy {
 
   get messaging(): Messaging {
     return getMessaging(this.app);
+  }
+
+  get storage(): Storage {
+    return getStorage(this.app);
+  }
+
+  /** The configured bucket name, or `undefined` if uploads are not enabled. */
+  get bucketName(): string | undefined {
+    return this.storageBucket;
   }
 
   /**

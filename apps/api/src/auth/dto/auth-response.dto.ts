@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import type { AuthResponse, User, UserRole } from '@zporter/shared';
 
 class PublicUserDto implements User {
@@ -6,6 +6,12 @@ class PublicUserDto implements User {
   @ApiProperty() email!: string;
   @ApiProperty() displayName!: string;
   @ApiProperty({ enum: ['player', 'coach', 'admin'] }) role!: UserRole;
+  @ApiProperty({ example: '#NeoJon041872' }) handle!: string;
+  @ApiPropertyOptional() avatarUrl?: string;
+  @ApiPropertyOptional() country?: string;
+  @ApiPropertyOptional() city?: string;
+  @ApiPropertyOptional() club?: string;
+  @ApiPropertyOptional({ example: 'FW' }) position?: string;
   @ApiProperty({ format: 'date-time' }) createdAt!: string;
 }
 

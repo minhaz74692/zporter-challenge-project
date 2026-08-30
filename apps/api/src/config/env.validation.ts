@@ -36,6 +36,11 @@ export class EnvironmentVariables {
   @IsNotEmpty()
   FIREBASE_PROJECT_ID!: string;
 
+  /** Cloud Storage bucket; required only for avatar / cover uploads. */
+  @IsString()
+  @IsOptional()
+  FIREBASE_STORAGE_BUCKET?: string;
+
   @IsString()
   @IsNotEmpty()
   JWT_ACCESS_SECRET!: string;

@@ -5,28 +5,30 @@ import {
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
-import type { InviteState, Participant, SubmittedResult } from '@zporter/shared';
-import {
-  FieldValue,
-  type DocumentData,
-  type Firestore,
-  type QueryDocumentSnapshot,
-  type WriteBatch,
-} from 'firebase-admin/firestore';
+import type { InviteState, Participant, UserSummary } from '@zporter/shared';
+import { FieldValue, type Firestore } from 'firebase-admin/firestore';
 import { FIRESTORE } from '../firebase/firebase.constants.js';
+import { participantFromDoc } from './participant.mapper.js';
 
 const CHALLENGES = 'challenges';
 const SUBCOLLECTION = 'participants';
-
-export interface NewInvite {
-  userId: string;
-  displayName: string;
-}
 
 /** Firestore raises gRPC code 9 (FAILED_PRECONDITION) when an index is absent or building. */
 function isMissingIndex(err: unknown): boolean {
   const e = err as { code?: number; message?: string };
   return e?.code === 9 || /requires an index|index.*not ready/i.test(e?.message ?? '');
+}
+
+/** The user fields denormalised onto every participant row. */
+function denormalisedUser(user: UserSummary) {
+  return {
+    userId: user.id,
+    displayName: user.displayName,
+    handle: user.handle,
+    avatarUrl: user.avatarUrl,
+    club: user.club,
+    position: user.position,
+  };
 }
 
 /**
@@ -49,12 +51,12 @@ export class ParticipantsRepository {
 
   async findOne(challengeId: string, userId: string): Promise<Participant | null> {
     const snap = await this.col(challengeId).doc(userId).get();
-    return snap.exists ? this.fromDoc(snap as QueryDocumentSnapshot) : null;
+    return snap.exists ? participantFromDoc(snap) : null;
   }
 
   async listByChallenge(challengeId: string): Promise<Participant[]> {
     const snap = await this.col(challengeId).get();
-    return snap.docs.map((d) => this.fromDoc(d));
+    return snap.docs.map(participantFromDoc);
   }
 
   /**
@@ -67,7 +69,7 @@ export class ParticipantsRepository {
         .collectionGroup(SUBCOLLECTION)
         .where('userId', '==', userId)
         .get();
-      return snap.docs.map((d) => this.fromDoc(d));
+      return snap.docs.map(participantFromDoc);
     } catch (err) {
       if (isMissingIndex(err)) {
         throw new ServiceUnavailableException(
@@ -80,62 +82,61 @@ export class ParticipantsRepository {
   }
 
   /**
-   * Adds `invited` rows for users who do not already have one. Returns how many
-   * were actually written.
+   * Adds `invited` rows for users who do not already have one. Returns the
+   * subset that was actually written (so the caller can notify them).
    */
-  async addInvites(challengeId: string, invites: NewInvite[]): Promise<number> {
-    if (invites.length === 0) return 0;
+  async addInvites(challengeId: string, invites: UserSummary[]): Promise<UserSummary[]> {
+    if (invites.length === 0) return [];
     const existing = await this.listByChallenge(challengeId);
     const known = new Set(existing.map((p) => p.userId));
-    const fresh = invites.filter((i) => !known.has(i.userId));
-    if (fresh.length === 0) return 0;
+    const fresh = invites.filter((i) => !known.has(i.id));
+    if (fresh.length === 0) return [];
 
     const now = new Date().toISOString();
     const batch = this.db.batch();
-    for (const invite of fresh) {
-      batch.set(this.col(challengeId).doc(invite.userId), {
+    for (const user of fresh) {
+      batch.set(this.col(challengeId).doc(user.id), {
         challengeId,
-        userId: invite.userId,
-        displayName: invite.displayName,
+        ...denormalisedUser(user),
         inviteState: 'invited',
         resultState: 'pending',
         joinedAt: now,
       });
     }
     await batch.commit();
-    return fresh.length;
+    return fresh;
   }
 
   /**
    * Transactionally move the caller into `accepted` and keep `participantCount`
-   * in step. Re-accepting is a no-op. For a `global` challenge a missing row is
+   * in step. Re-accepting is a no-op. For a public challenge a missing row is
    * created; for an invited one it is rejected.
    */
   accept(
     challengeId: string,
-    member: NewInvite,
-    isGlobal: boolean,
+    member: UserSummary,
+    isPublic: boolean,
   ): Promise<Participant> {
-    return this.transition(challengeId, member, isGlobal, 'accepted');
+    return this.transition(challengeId, member, isPublic, 'accepted');
   }
 
-  /** Transactionally move the caller into `declined` (creating the row if `global`). */
+  /** Transactionally move the caller into `declined` (creating the row if public). */
   decline(
     challengeId: string,
-    member: NewInvite,
-    isGlobal: boolean,
+    member: UserSummary,
+    isPublic: boolean,
   ): Promise<Participant> {
-    return this.transition(challengeId, member, isGlobal, 'declined');
+    return this.transition(challengeId, member, isPublic, 'declined');
   }
 
   private async transition(
     challengeId: string,
-    member: NewInvite,
-    isGlobal: boolean,
+    member: UserSummary,
+    isPublic: boolean,
     target: Extract<InviteState, 'accepted' | 'declined'>,
   ): Promise<Participant> {
     const challengeRef = this.db.collection(CHALLENGES).doc(challengeId);
-    const participantRef = this.ref(challengeId, member.userId);
+    const participantRef = this.ref(challengeId, member.id);
 
     return this.db.runTransaction(async (tx) => {
       const [challengeSnap, participantSnap] = await Promise.all([
@@ -144,25 +145,25 @@ export class ParticipantsRepository {
       ]);
       if (!challengeSnap.exists) throw new NotFoundException('Challenge not found');
 
-      const current = participantSnap.exists
-        ? this.fromDoc(participantSnap as QueryDocumentSnapshot)
-        : null;
-      if (!current && !isGlobal) {
+      const current = participantSnap.exists ? participantFromDoc(participantSnap) : null;
+      if (!current && !isPublic) {
         throw new ForbiddenException('You were not invited to this challenge');
       }
       if (current?.inviteState === target) return current; // idempotent
 
       const now = new Date().toISOString();
       const next: Participant = {
-        id: member.userId,
+        id: member.id,
         challengeId,
-        userId: member.userId,
+        ...denormalisedUser(member),
+        // keep the row's own denormalised name if it already had one
         displayName: current?.displayName ?? member.displayName,
         inviteState: target,
         resultState: current?.resultState ?? 'pending',
         submittedResult: current?.submittedResult,
         rank: current?.rank,
         joinedAt: current?.joinedAt ?? now,
+        respondedAt: now,
       };
 
       const { id: _id, ...doc } = next;
@@ -180,34 +181,5 @@ export class ParticipantsRepository {
       }
       return next;
     });
-  }
-
-  setInBatch(
-    batch: WriteBatch,
-    challengeId: string,
-    userId: string,
-    patch: Partial<{
-      inviteState: Participant['inviteState'];
-      resultState: Participant['resultState'];
-      submittedResult: SubmittedResult;
-      rank: number;
-    }>,
-  ): void {
-    batch.set(this.ref(challengeId, userId), patch, { merge: true });
-  }
-
-  private fromDoc(snap: QueryDocumentSnapshot<DocumentData>): Participant {
-    const data = snap.data();
-    return {
-      id: snap.id,
-      challengeId: data.challengeId,
-      userId: data.userId ?? snap.id,
-      displayName: data.displayName,
-      inviteState: data.inviteState,
-      resultState: data.resultState,
-      submittedResult: data.submittedResult,
-      rank: data.rank,
-      joinedAt: data.joinedAt,
-    };
   }
 }

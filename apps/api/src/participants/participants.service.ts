@@ -1,11 +1,6 @@
 import { ConflictException, Injectable } from '@nestjs/common';
-import type { Challenge, Participant } from '@zporter/shared';
+import type { Challenge, Participant, UserSummary } from '@zporter/shared';
 import { ParticipantsRepository } from './participants.repository.js';
-
-export interface JoiningMember {
-  userId: string;
-  displayName: string;
-}
 
 /**
  * Owns the participant invite-state machine (`invited → accepted | declined`).
@@ -17,14 +12,14 @@ export interface JoiningMember {
 export class ParticipantsService {
   constructor(private readonly repo: ParticipantsRepository) {}
 
-  async accept(challenge: Challenge, member: JoiningMember): Promise<Participant> {
+  async accept(challenge: Challenge, member: UserSummary): Promise<Participant> {
     this.assertOpen(challenge);
-    return this.repo.accept(challenge.id, member, challenge.visibility === 'global');
+    return this.repo.accept(challenge.id, member, challenge.visibility === 'all');
   }
 
-  async decline(challenge: Challenge, member: JoiningMember): Promise<Participant> {
+  async decline(challenge: Challenge, member: UserSummary): Promise<Participant> {
     this.assertOpen(challenge);
-    return this.repo.decline(challenge.id, member, challenge.visibility === 'global');
+    return this.repo.decline(challenge.id, member, challenge.visibility === 'all');
   }
 
   listForChallenge(challengeId: string): Promise<Participant[]> {

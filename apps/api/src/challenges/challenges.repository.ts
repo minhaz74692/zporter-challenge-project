@@ -10,8 +10,11 @@ import { FIRESTORE } from '../firebase/firebase.constants.js';
 
 const COLLECTION = 'challenges';
 
-/** Fields the repository writes (id = doc id, createdAt/status set here). */
-export type NewChallenge = Omit<Challenge, 'id' | 'createdAt' | 'participantCount'>;
+/** Fields the repository writes (id/createdAt/participantCount/creator set elsewhere). */
+export type NewChallenge = Omit<
+  Challenge,
+  'id' | 'createdAt' | 'participantCount' | 'creator'
+>;
 
 @Injectable()
 export class ChallengesRepository {
@@ -35,9 +38,14 @@ export class ChallengesRepository {
       .map((s) => this.fromDoc(s as QueryDocumentSnapshot));
   }
 
-  async listGlobal(): Promise<Challenge[]> {
-    const snap = await this.col.where('visibility', '==', 'global').get();
+  /** Challenges visible to everyone without an invite (Figma "Share with: All"). */
+  async listPublic(): Promise<Challenge[]> {
+    const snap = await this.col.where('visibility', '==', 'all').get();
     return snap.docs.map((d) => this.fromDoc(d));
+  }
+
+  async updateFields(id: string, patch: Partial<Challenge>): Promise<void> {
+    await this.col.doc(id).set(patch, { merge: true });
   }
 
   async create(data: NewChallenge): Promise<Challenge> {
@@ -48,7 +56,7 @@ export class ChallengesRepository {
       createdAt: new Date().toISOString(),
       ...data,
     };
-    const { id: _id, ...doc } = record;
+    const { id: _id, creator: _creator, ...doc } = record;
     await ref.set(doc);
     return record;
   }
@@ -66,6 +74,9 @@ export class ChallengesRepository {
       return {
         userId: data.userId ?? d.id,
         displayName: data.displayName,
+        handle: data.handle,
+        avatarUrl: data.avatarUrl,
+        club: data.club,
         value: data.value,
         rank: data.rank,
         updatedAt: data.updatedAt,
@@ -79,16 +90,31 @@ export class ChallengesRepository {
       id: snap.id,
       templateId: data.templateId,
       title: data.title,
+      ingress: data.ingress,
       description: data.description,
-      category: data.category,
+      mainCategory: data.mainCategory,
+      collections: data.collections ?? [],
+      equipmentTags: data.equipmentTags ?? [],
       resultType: data.resultType,
+      resultUnit: data.resultUnit,
       scoringDirection: data.scoringDirection,
-      rules: data.rules,
-      reward: data.reward,
+      durationMinutes: data.durationMinutes ?? 20,
+      location: data.location ?? 'anywhere',
       startAt: data.startAt,
       deadline: data.deadline,
       status: data.status,
       visibility: data.visibility,
+      pointsToParticipate: data.pointsToParticipate ?? 0,
+      rewardPoints: data.rewardPoints ?? 0,
+      rewardBadgeId: data.rewardBadgeId,
+      minParticipants: data.minParticipants ?? 1,
+      ageFrom: data.ageFrom,
+      ageTo: data.ageTo,
+      position: data.position,
+      mediaImageUrl: data.mediaImageUrl,
+      mediaVideoUrl: data.mediaVideoUrl,
+      ratingAverage: data.ratingAverage,
+      ratingCount: data.ratingCount,
       createdBy: data.createdBy,
       participantCount: data.participantCount ?? 0,
       createdAt: data.createdAt,

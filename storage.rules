@@ -1,0 +1,13 @@
+rules_version = '2';
+
+// Deny-all, same as Firestore. Uploads go client → NestJS API → Storage via the
+// Admin SDK (which bypasses rules). Reads use Firebase download-token URLs, and
+// those tokens bypass rules too — so images stay readable without opening the
+// bucket.
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -8,32 +8,35 @@ import type {
   Challenge,
   ChallengeCategory,
   ChallengeDetail,
-  ChallengeReward,
   LeaderboardEntry,
   Participant,
   ParticipantSummary,
   ResultType,
-  ScoringDirection,
+  ResultUnit,
+  SubmitResultRequest,
+  UserSummary,
 } from '@zporter/shared';
+import { NotificationsService } from '../notifications/notifications.service.js';
 import { ParticipantsRepository } from '../participants/participants.repository.js';
+import { StorageService, type UploadedImage } from '../storage/storage.service.js';
 import { ParticipantsService } from '../participants/participants.service.js';
+import { ResultsService } from '../results/results.service.js';
 import { TeamsService } from '../teams/teams.service.js';
 import { TemplatesService } from '../templates/templates.service.js';
 import type { AuthenticatedUser } from '../auth/types.js';
 import { UsersService } from '../users/users.service.js';
-import { ChallengesRepository } from './challenges.repository.js';
+import { ChallengesRepository, type NewChallenge } from './challenges.repository.js';
 import type { CreateChallengeDto } from './dto/create-challenge.dto.js';
 import type { InviteDto } from './dto/invite.dto.js';
 
-interface ChallengeContent {
-  title: string;
-  description: string;
-  category: string;
-  resultType: ResultType;
-  scoringDirection: ScoringDirection;
-  rules: string;
-  reward: ChallengeReward;
-}
+const DEFAULT_UNIT: Record<ResultType, ResultUnit> = {
+  count: 'reps',
+  time: 'seconds',
+  boolean: 'boolean',
+  score: 'points',
+  text: 'count',
+  proof: 'count',
+};
 
 @Injectable()
 export class ChallengesService {
@@ -41,21 +44,24 @@ export class ChallengesService {
     private readonly repo: ChallengesRepository,
     private readonly participants: ParticipantsRepository,
     private readonly participation: ParticipantsService,
+    private readonly results: ResultsService,
+    private readonly notifications: NotificationsService,
+    private readonly storage: StorageService,
     private readonly templates: TemplatesService,
     private readonly teams: TeamsService,
     private readonly users: UsersService,
   ) {}
 
   async create(dto: CreateChallengeDto, creator: AuthenticatedUser): Promise<Challenge> {
-    const visibility = dto.visibility ?? 'invited';
-    if (visibility === 'global' && creator.role !== 'admin') {
-      throw new ForbiddenException('Only admins can create global challenges');
+    const visibility = dto.visibility ?? 'private';
+    if (visibility === 'all' && creator.role !== 'admin') {
+      throw new ForbiddenException('Only admins can publish a challenge to everyone');
     }
     if (Date.parse(dto.deadline) <= Date.parse(dto.startAt)) {
       throw new BadRequestException('deadline must be after startAt');
     }
 
-    const content = await this.resolveContent(dto);
+    const content = await this.buildContent(dto);
     const challenge = await this.repo.create({
       templateId: dto.templateId,
       ...content,
@@ -71,9 +77,9 @@ export class ChallengesService {
       creator,
     );
     if (launchInvites.length > 0) {
-      await this.writeInvites(challenge.id, launchInvites);
+      await this.writeInvites(challenge, launchInvites);
     }
-    return challenge;
+    return this.withCreator(challenge);
   }
 
   async invite(
@@ -86,27 +92,40 @@ export class ChallengesService {
     if (targets.length === 0) {
       throw new BadRequestException('Provide userIds and/or a teamId to invite');
     }
-    const invited = await this.writeInvites(challenge.id, targets);
-    return { invited };
+    const invited = await this.writeInvites(challenge, targets);
+    return { invited: invited.length };
   }
 
-  /** Player accepts an invite (or joins a `global` challenge). */
+  /** Player accepts an invite (or joins a public challenge). */
   async accept(challengeId: string, user: AuthenticatedUser): Promise<Participant> {
     const challenge = this.withComputedStatus(await this.requireChallenge(challengeId));
-    const account = await this.users.getById(user.userId);
-    return this.participation.accept(challenge, {
-      userId: user.userId,
-      displayName: account.displayName,
-    });
+    const member = await this.users.summaryById(user.userId);
+    return this.participation.accept(challenge, member);
   }
 
   async decline(challengeId: string, user: AuthenticatedUser): Promise<Participant> {
     const challenge = this.withComputedStatus(await this.requireChallenge(challengeId));
-    const account = await this.users.getById(user.userId);
-    return this.participation.decline(challenge, {
-      userId: user.userId,
-      displayName: account.displayName,
-    });
+    const member = await this.users.summaryById(user.userId);
+    return this.participation.decline(challenge, member);
+  }
+
+  async submitResult(
+    challengeId: string,
+    user: AuthenticatedUser,
+    dto: SubmitResultRequest,
+  ): Promise<Participant> {
+    const challenge = this.withComputedStatus(await this.requireChallenge(challengeId));
+    const participant = await this.results.submit(challenge, user.userId, dto);
+    if (challenge.createdBy !== user.userId) {
+      await this.notifications.notify({
+        userId: challenge.createdBy,
+        type: 'result_submitted',
+        challengeId: challenge.id,
+        title: `${participant.displayName} submitted a result`,
+        body: challenge.title,
+      });
+    }
+    return participant;
   }
 
   async listByCategory(
@@ -118,15 +137,16 @@ export class ChallengesService {
 
     const challenges = await this.repo.findManyByIds([...partByChallenge.keys()]);
     if (category === 'new') {
-      for (const globalChallenge of await this.repo.listGlobal()) {
-        if (!partByChallenge.has(globalChallenge.id)) challenges.push(globalChallenge);
+      for (const publicChallenge of await this.repo.listPublic()) {
+        if (!partByChallenge.has(publicChallenge.id)) challenges.push(publicChallenge);
       }
     }
 
-    return challenges
+    const filtered = challenges
       .map((c) => this.withComputedStatus(c))
       .filter((c) => this.matchesCategory(c, partByChallenge.get(c.id), category))
       .sort((a, b) => a.deadline.localeCompare(b.deadline));
+    return this.withCreators(filtered);
   }
 
   async getDetail(
@@ -134,15 +154,33 @@ export class ChallengesService {
     viewer: AuthenticatedUser,
   ): Promise<ChallengeDetail> {
     const challenge = await this.requireChallenge(challengeId);
-    const [participant, leaderboardPreview] = await Promise.all([
+    const [participant, leaderboardPreview, creator] = await Promise.all([
       this.participants.findOne(challengeId, viewer.userId),
       this.repo.leaderboard(challengeId, 5),
+      this.users.summaryById(challenge.createdBy).catch(() => undefined),
     ]);
     return {
       ...this.withComputedStatus(challenge),
+      creator,
       viewerParticipant: participant ? this.toSummary(participant) : undefined,
       leaderboardPreview,
     };
+  }
+
+  /** Upload / replace the challenge's cover image (Figma create-form media). */
+  async setCover(
+    challengeId: string,
+    user: AuthenticatedUser,
+    image: UploadedImage,
+  ): Promise<Challenge> {
+    const challenge = await this.requireOwned(challengeId, user);
+    const mediaImageUrl = await this.storage.uploadImage({
+      buffer: image.buffer,
+      mimeType: image.mimetype,
+      path: `challenges/${challenge.id}/cover`,
+    });
+    await this.repo.updateFields(challenge.id, { mediaImageUrl });
+    return this.withCreator({ ...challenge, mediaImageUrl });
   }
 
   async listParticipants(challengeId: string): Promise<Participant[]> {
@@ -179,6 +217,26 @@ export class ChallengesService {
     return challenge;
   }
 
+  private async withCreator(challenge: Challenge): Promise<Challenge> {
+    return {
+      ...challenge,
+      creator: await this.users.summaryById(challenge.createdBy).catch(() => undefined),
+    };
+  }
+
+  private async withCreators(challenges: Challenge[]): Promise<Challenge[]> {
+    const ids = [...new Set(challenges.map((c) => c.createdBy))];
+    const summaries = new Map<string, UserSummary | undefined>(
+      await Promise.all(
+        ids.map(
+          async (id) =>
+            [id, await this.users.summaryById(id).catch(() => undefined)] as const,
+        ),
+      ),
+    );
+    return challenges.map((c) => ({ ...c, creator: summaries.get(c.createdBy) }));
+  }
+
   private matchesCategory(
     challenge: Challenge,
     participant: Participant | undefined,
@@ -190,7 +248,7 @@ export class ChallengesService {
         if (ended) return false;
         return participant
           ? participant.inviteState === 'invited'
-          : challenge.visibility === 'global';
+          : challenge.visibility === 'all';
       case 'active':
         return (
           !ended &&
@@ -222,45 +280,59 @@ export class ChallengesService {
     };
   }
 
-  private async resolveContent(dto: CreateChallengeDto): Promise<ChallengeContent> {
-    const base = dto.templateId
-      ? await this.fromTemplate(dto.templateId)
-      : ({} as Partial<ChallengeContent>);
+  /**
+   * Merge create-form fields with the template (if any) and sensible defaults.
+   * `title` / `description` / `resultType` / `scoringDirection` must resolve to a
+   * value; the rest fall back. The template's `rules` (success criteria) is
+   * folded into the challenge `description` on copy.
+   */
+  private async buildContent(
+    dto: CreateChallengeDto,
+  ): Promise<
+    Omit<
+      NewChallenge,
+      'templateId' | 'startAt' | 'deadline' | 'status' | 'visibility' | 'createdBy'
+    >
+  > {
+    const t = dto.templateId ? await this.templates.getById(dto.templateId) : null;
 
-    const merged: Partial<ChallengeContent> = {
-      title: dto.title ?? base.title,
-      description: dto.description ?? base.description,
-      category: dto.category ?? base.category,
-      resultType: dto.resultType ?? base.resultType,
-      scoringDirection: dto.scoringDirection ?? base.scoringDirection,
-      rules: dto.rules ?? base.rules,
-      reward: dto.reward ?? base.reward,
-    };
+    const title = dto.title ?? t?.title;
+    const resultType = dto.resultType ?? t?.resultType;
+    const scoringDirection = dto.scoringDirection ?? t?.scoringDirection;
+    const description =
+      dto.description ??
+      (t ? [t.description, t.rules].filter(Boolean).join('\n\n') : undefined);
 
-    const missing = (['title', 'description', 'category', 'resultType', 'scoringDirection', 'rules'] as const).filter(
-      (k) => merged[k] == null || merged[k] === '',
-    );
+    const missing = Object.entries({ title, description, resultType, scoringDirection })
+      .filter(([, v]) => v == null || v === '')
+      .map(([k]) => k);
     if (missing.length > 0) {
       throw new BadRequestException(
         `Missing required field(s): ${missing.join(', ')} (no template to fall back on)`,
       );
     }
-    if (!merged.reward) {
-      merged.reward = { label: `${merged.title} — completed` };
-    }
-    return merged as ChallengeContent;
-  }
 
-  private async fromTemplate(templateId: string): Promise<Partial<ChallengeContent>> {
-    const t = await this.templates.getById(templateId);
     return {
-      title: t.title,
-      description: t.description,
-      category: t.category,
-      resultType: t.resultType,
-      scoringDirection: t.scoringDirection,
-      rules: t.rules,
-      reward: { label: `${t.title} — completed`, badgeId: t.defaultRewardBadgeId },
+      title: title!.trim(),
+      ingress: (dto.ingress ?? t?.ingress)?.trim(),
+      description: description!,
+      mainCategory: dto.mainCategory ?? t?.mainCategory ?? 'other',
+      collections: dto.collections ?? t?.collections ?? [],
+      equipmentTags: dto.equipmentTags ?? t?.equipmentTags ?? [],
+      resultType: resultType!,
+      resultUnit: dto.resultUnit ?? t?.resultUnit ?? DEFAULT_UNIT[resultType!],
+      scoringDirection: scoringDirection!,
+      durationMinutes: dto.durationMinutes ?? t?.durationMinutes ?? 20,
+      location: dto.location ?? t?.location ?? 'anywhere',
+      pointsToParticipate: dto.pointsToParticipate ?? t?.pointsToParticipate ?? 0,
+      rewardPoints: dto.rewardPoints ?? t?.rewardPoints ?? 0,
+      rewardBadgeId: dto.rewardBadgeId ?? t?.defaultRewardBadgeId,
+      minParticipants: dto.minParticipants ?? 1,
+      ageFrom: dto.ageFrom,
+      ageTo: dto.ageTo,
+      position: dto.position,
+      mediaImageUrl: dto.mediaImageUrl,
+      mediaVideoUrl: dto.mediaVideoUrl,
     };
   }
 
@@ -278,16 +350,29 @@ export class ChallengesService {
     return [...ids];
   }
 
-  private async writeInvites(challengeId: string, userIds: string[]): Promise<number> {
-    const entries = await Promise.all(
-      userIds.map(async (userId) => {
-        const user = await this.users.getById(userId).catch(() => null);
-        return user ? { userId, displayName: user.displayName } : null;
-      }),
+  /** Resolve user summaries, write the invite rows, notify whoever was new. */
+  private async writeInvites(
+    challenge: Challenge,
+    userIds: string[],
+  ): Promise<UserSummary[]> {
+    const summaries = (
+      await Promise.all(
+        userIds.map((id) => this.users.summaryById(id).catch(() => null)),
+      )
+    ).filter((s): s is UserSummary => s !== null);
+
+    const invited = await this.participants.addInvites(challenge.id, summaries);
+    await Promise.all(
+      invited.map((user) =>
+        this.notifications.notify({
+          userId: user.id,
+          type: 'challenge_invite',
+          challengeId: challenge.id,
+          title: 'You have a new challenge',
+          body: challenge.title,
+        }),
+      ),
     );
-    return this.participants.addInvites(
-      challengeId,
-      entries.filter((e): e is { userId: string; displayName: string } => e !== null),
-    );
+    return invited;
   }
 }

@@ -23,10 +23,34 @@ export type ScoringDirection = 'higher_better' | 'lower_better';
 export type ChallengeStatus = 'draft' | 'active' | 'ended';
 
 /**
- * `invited` — only invited players see it (coach flow). `global` — every player
- * sees it in their New tab, no invite needed (admin CMS "global" push).
+ * Figma "Share with". `private` — invite-only (the coach flow). `all` — every
+ * player sees it in New, no invite (admin CMS "global" push). `friends` /
+ * `fans` are audience buckets that behave like `private` in this slice (no
+ * relationship graph yet).
  */
-export type ChallengeVisibility = 'invited' | 'global';
+export type ChallengeVisibility = 'private' | 'friends' | 'fans' | 'all';
+
+/** Figma "Main Category" (single-select on the create form). */
+export type ChallengeMainCategory =
+  | 'physical'
+  | 'technical'
+  | 'tactical'
+  | 'mental'
+  | 'rehab'
+  | 'other';
+
+/** Figma "Location" — where the challenge is performed. */
+export type ChallengeLocation = 'anywhere' | 'field' | 'gym' | 'court' | 'home';
+
+/** Display unit for a result value (the "kg" in "125 kg"). */
+export type ResultUnit =
+  | 'reps'
+  | 'count'
+  | 'seconds'
+  | 'kg'
+  | 'meters'
+  | 'points'
+  | 'boolean';
 
 /** Player-facing list tabs — see the category→query mapping in §6. */
 export type ChallengeCategory = 'new' | 'active' | 'done' | 'declined' | 'ended';
@@ -41,4 +65,6 @@ export type NotificationType =
   | 'challenge_invite'
   | 'challenge_launched'
   | 'result_submitted'
-  | 'challenge_ended';
+  | 'challenge_ended'
+  /** "closes in 48h — we have not seen your results yet" (needs a scheduler; type reserved). */
+  | 'challenge_reminder';

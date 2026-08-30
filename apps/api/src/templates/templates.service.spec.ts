@@ -33,11 +33,13 @@ class FakeTemplatesRepository {
 
 const INPUT: CreateTemplateRequest = {
   title: '  Sprint  ',
+  ingress: '  how fast?  ',
   description: '  40m dash  ',
-  category: '  Speed  ',
-  resultType: 'time',
-  scoringDirection: 'lower_better',
   rules: '  standing start  ',
+  mainCategory: 'physical',
+  resultType: 'time',
+  resultUnit: 'seconds',
+  scoringDirection: 'lower_better',
 };
 
 describe('TemplatesService', () => {
@@ -53,9 +55,11 @@ describe('TemplatesService', () => {
     const tpl = await service.create(INPUT, 'coach1');
     expect(tpl).toMatchObject({
       title: 'Sprint',
+      ingress: 'how fast?',
       description: '40m dash',
-      category: 'Speed',
       rules: 'standing start',
+      mainCategory: 'physical',
+      resultUnit: 'seconds',
       isPublic: true,
       createdBy: 'coach1',
     });

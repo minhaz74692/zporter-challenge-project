@@ -1,32 +1,66 @@
 /**
  * Dev seed — idempotent. Populates the reference data the prototype needs
- * before anything works: demo accounts, recognition badges, reusable challenge
- * templates, and one squad.
+ * before anything works: demo accounts (with profile fields), recognition
+ * badges, reusable challenge templates, and one squad.
  *
  *   pnpm --filter @zporter/api seed
  *
- * Users go through `UsersService` (same argon2id path as signup). Badges /
- * templates / team use fixed doc ids and `.set()`, so re-running overwrites
- * rather than duplicating. Live challenges are NOT seeded here — that needs the
- * Phase 2 domain services; extend this script once they exist.
+ * Users go through `UsersService` (same argon2id path as signup); profile
+ * fields are merge-written afterwards so re-runs backfill them. Badges /
+ * templates / team use fixed doc ids and `.set()`.
  */
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
-import type { SignupRequest } from '@zporter/shared';
-import type { Firestore } from 'firebase-admin/firestore';
+import type {
+  ChallengeLocation,
+  ChallengeMainCategory,
+  ResultType,
+  ResultUnit,
+  ScoringDirection,
+  SignupRequest,
+} from '@zporter/shared';
+import { FieldValue, type Firestore } from 'firebase-admin/firestore';
 import { AppModule } from '../app.module.js';
 import { FIRESTORE } from '../firebase/firebase.constants.js';
 import { UsersService } from '../users/users.service.js';
 
 const PASSWORD = 'password123#';
 
-const USERS: SignupRequest[] = [
-  { email: 'admin@zporter.test', password: PASSWORD, displayName: 'Amara Admin', role: 'admin' },
-  { email: 'coach@zporter.test', password: PASSWORD, displayName: 'Coach Carter', role: 'coach' },
-  { email: 'player1@zporter.test', password: PASSWORD, displayName: 'Priya Nair', role: 'player' },
-  { email: 'player2@zporter.test', password: PASSWORD, displayName: 'Diego Duarte', role: 'player' },
-  { email: 'player3@zporter.test', password: PASSWORD, displayName: 'Mia Moeller', role: 'player' },
-  { email: 'player4@zporter.test', password: PASSWORD, displayName: 'Sam Silva', role: 'player' },
+interface UserSeed extends SignupRequest {
+  handle: string;
+  country: string;
+  city: string;
+  club: string;
+  position: string;
+}
+
+const seedUser = (
+  email: string,
+  displayName: string,
+  role: SignupRequest['role'],
+  handle: string,
+  city: string,
+  club: string,
+  position: string,
+): UserSeed => ({
+  email,
+  password: PASSWORD,
+  displayName,
+  role,
+  handle,
+  country: 'SE',
+  city,
+  club,
+  position,
+});
+
+const USERS: UserSeed[] = [
+  seedUser('admin@zporter.test', 'Amara Admin', 'admin', '#AmaAdm900001', 'Stockholm', 'Zporter HQ', 'Admin'),
+  seedUser('coach@zporter.test', 'Coach Carter', 'coach', '#CoaCar900002', 'Stockholm', 'Maj FC', 'Head Coach'),
+  seedUser('player1@zporter.test', 'Priya Nair', 'player', '#PriNai900003', 'Goteborg', 'Maj FC', 'FW'),
+  seedUser('player2@zporter.test', 'Diego Duarte', 'player', '#DieDua900004', 'Malmo', 'Maj FC', 'CM'),
+  seedUser('player3@zporter.test', 'Mia Moeller', 'player', '#MiaMoe900005', 'Uppsala', 'Maj FC', 'GK'),
+  seedUser('player4@zporter.test', 'Sam Silva', 'player', '#SamSil900006', 'Ostersund', 'Ope IF', 'DF'),
 ];
 
 const BADGES = [
@@ -39,11 +73,19 @@ const BADGES = [
 interface TemplateSeed {
   id: string;
   title: string;
+  ingress: string;
   description: string;
-  category: string;
-  resultType: 'count' | 'time' | 'boolean';
-  scoringDirection: 'higher_better' | 'lower_better';
   rules: string;
+  mainCategory: ChallengeMainCategory;
+  collections: string[];
+  equipmentTags: string[];
+  resultType: ResultType;
+  resultUnit: ResultUnit;
+  scoringDirection: ScoringDirection;
+  durationMinutes: number;
+  location: ChallengeLocation;
+  pointsToParticipate: number;
+  rewardPoints: number;
   defaultRewardBadgeId?: string;
 }
 
@@ -51,41 +93,73 @@ const TEMPLATES: TemplateSeed[] = [
   {
     id: 'keepie-uppies-century',
     title: 'Keepie-Uppies Century',
+    ingress: 'How high can you count without the ball touching the ground?',
     description: 'How many consecutive keepie-uppies can you do in one go?',
-    category: 'Technique',
-    resultType: 'count',
-    scoringDirection: 'higher_better',
     rules: 'One attempt, no hands, ball must not touch the ground. Report your best count.',
+    mainCategory: 'technical',
+    collections: ['ballcontrol'],
+    equipmentTags: ['#Balls'],
+    resultType: 'count',
+    resultUnit: 'reps',
+    scoringDirection: 'higher_better',
+    durationMinutes: 10,
+    location: 'anywhere',
+    pointsToParticipate: 5,
+    rewardPoints: 50,
     defaultRewardBadgeId: 'sharp-shooter',
   },
   {
     id: 'sprint-40m',
     title: '40m Sprint',
+    ingress: 'Standing start to the 40m line — how fast?',
     description: 'Fastest 40 metres from a standing start.',
-    category: 'Speed',
-    resultType: 'time',
-    scoringDirection: 'lower_better',
     rules: 'Flat ground, standing start, stop the clock at 40m. Report seconds (one decimal).',
+    mainCategory: 'physical',
+    collections: ['speed'],
+    equipmentTags: ['#Clock', '#Cones'],
+    resultType: 'time',
+    resultUnit: 'seconds',
+    scoringDirection: 'lower_better',
+    durationMinutes: 5,
+    location: 'field',
+    pointsToParticipate: 10,
+    rewardPoints: 100,
     defaultRewardBadgeId: 'top-of-the-table',
   },
   {
     id: 'cone-dribble-slalom',
     title: 'Cone Dribble Slalom',
+    ingress: 'Eight cones, there and back, close control.',
     description: 'Dribble through 8 cones and back as fast as you can.',
-    category: 'Technique',
-    resultType: 'time',
-    scoringDirection: 'lower_better',
     rules: '8 cones, 1m apart. Touch the ball at every gate. Report your fastest run.',
+    mainCategory: 'technical',
+    collections: ['dribble'],
+    equipmentTags: ['#Cones', '#Balls'],
+    resultType: 'time',
+    resultUnit: 'seconds',
+    scoringDirection: 'lower_better',
+    durationMinutes: 15,
+    location: 'field',
+    pointsToParticipate: 5,
+    rewardPoints: 60,
     defaultRewardBadgeId: 'sharp-shooter',
   },
   {
     id: 'weekly-training-log',
     title: 'Weekly Training Log',
+    ingress: 'Did you complete every prescribed session this week?',
     description: 'Did you complete all your prescribed sessions this week?',
-    category: 'Consistency',
-    resultType: 'boolean',
-    scoringDirection: 'higher_better',
     rules: 'Mark complete only if every session in your plan was done. Honesty system.',
+    mainCategory: 'physical',
+    collections: ['strength'],
+    equipmentTags: [],
+    resultType: 'boolean',
+    resultUnit: 'boolean',
+    scoringDirection: 'higher_better',
+    durationMinutes: 30,
+    location: 'anywhere',
+    pointsToParticipate: 10,
+    rewardPoints: 40,
     defaultRewardBadgeId: 'iron-will',
   },
 ];
@@ -109,12 +183,24 @@ async function seed(): Promise<void> {
     const db = app.get<Firestore>(FIRESTORE);
     const now = new Date().toISOString();
 
-    // --- Users (skip if the email already exists) ---
+    // --- Users (create if new; always merge-write the profile fields) ---
     const idByEmail: Record<string, string> = {};
     for (const input of USERS) {
       const existing = await users.findByEmail(input.email);
       const record = existing ?? (await users.create(input));
       idByEmail[input.email] = record.id;
+      // No avatar — users start empty and upload their own; clear any stale one.
+      await db.collection('users').doc(record.id).set(
+        {
+          handle: input.handle,
+          avatarUrl: FieldValue.delete(),
+          country: input.country,
+          city: input.city,
+          club: input.club,
+          position: input.position,
+        },
+        { merge: true },
+      );
       logger.log(`${existing ? 'kept   ' : 'created'} user ${input.email} (${record.role})`);
     }
 
