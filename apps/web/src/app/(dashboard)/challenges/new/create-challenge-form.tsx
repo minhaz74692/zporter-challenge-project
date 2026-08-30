@@ -1,9 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import { useActionState } from 'react';
-import { createChallenge, type CreateState } from '../actions';
+import { useActionState, useState } from 'react';
+import { ChevronLeft, Clock, Image as ImageIcon, Share2, SquarePlay, Video } from 'lucide-react';
+import { cn } from '@/components/ui/cn';
+import type { CreateState } from '../actions';
 import {
+  AGE_OPTIONS,
   COLLECTIONS,
   EQUIPMENT_TAGS,
   LOCATIONS,
@@ -11,6 +14,8 @@ import {
   RESULT_TYPES,
   RESULT_UNITS,
   SCORING,
+  TARGET_GROUPS,
+  TIME_OPTIONS,
   VISIBILITIES,
 } from '@/components/challenges/challenge-options';
 import { FilledField, SelectInput, TextArea, TextInput } from '@/components/form/filled-field';
@@ -18,7 +23,9 @@ import { Segmented } from '@/components/form/segmented';
 import { MultiPill } from '@/components/form/multi-pill';
 import { TagPicker } from '@/components/form/tag-picker';
 import { PointsSlider } from '@/components/form/points-slider';
-import { ChevronLeft } from 'lucide-react';
+import { RichTextToolbar } from '@/components/form/rich-text-toolbar';
+import { InvitesPanel } from '@/components/challenges/invites-panel';
+import { LeaderboardBoard } from '@/components/challenges/leaderboard-board';
 import type { ChallengePrefill } from './prefill';
 
 function iso(offsetDays: number) {
@@ -27,109 +34,167 @@ function iso(offsetDays: number) {
   return { date: d.toISOString().slice(0, 10), time: '18:00' };
 }
 
-export function CreateChallengeForm({ prefill }: { prefill: ChallengePrefill | null }) {
-  const [state, action, pending] = useActionState<CreateState, FormData>(createChallenge, {});
-  const start = iso(0);
-  const end = iso(14);
+const pad = (n: number) => String(n).padStart(2, '0');
+function splitIso(value: string) {
+  const d = new Date(value);
+  return {
+    date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
+    time: `${pad(d.getHours())}:${pad(d.getMinutes())}`,
+  };
+}
+
+const MEDIA = [
+  { icon: ImageIcon, label: 'Add image' },
+  { icon: Video, label: 'Add video' },
+  { icon: SquarePlay, label: 'Add YouTube link' },
+  { icon: Share2, label: 'Share' },
+];
+
+const TABS = [
+  { id: 'challenge', label: 'Challenge' },
+  { id: 'invites', label: 'Invites' },
+  { id: 'leaderboard', label: 'Leaderboard' },
+] as const;
+type TabId = (typeof TABS)[number]['id'];
+
+const sentence = (v: string) => v.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase());
+const sectionLabel = 'mb-2 block pl-1 text-[11px] font-medium text-faint';
+
+export function CreateChallengeForm({
+  prefill,
+  onSubmit,
+  canPublishToAll = false,
+  heading = 'Create Challenge',
+  submitLabel = 'Save & Publish',
+  pendingLabel = 'Publishing…',
+}: {
+  prefill: ChallengePrefill | null;
+  onSubmit: (prev: CreateState, fd: FormData) => Promise<CreateState>;
+  canPublishToAll?: boolean;
+  heading?: string;
+  submitLabel?: string;
+  pendingLabel?: string;
+}) {
+  const [state, action, pending] = useActionState<CreateState, FormData>(onSubmit, {});
+  const [tab, setTab] = useState<TabId>('challenge');
   const p = prefill;
+  const start = p?.startAt ? splitIso(p.startAt) : iso(0);
+  const end = p?.deadline ? splitIso(p.deadline) : iso(14);
+
+  // "All" (global) is admin-only server-side — don't offer it to a coach.
+  const shareOptions = canPublishToAll
+    ? VISIBILITIES
+    : VISIBILITIES.filter((v) => v.value !== 'all');
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="mx-auto max-w-3xl pb-24">
       <form
         action={action}
-        className="rounded-[var(--radius-panel)] border border-border bg-surface p-6 sm:p-8"
+        className="space-y-6 rounded-[var(--radius-panel)] bg-field/60 p-5 ring-1 ring-white/[0.04] sm:p-7"
       >
         <input type="hidden" name="templateId" value={p?.templateId ?? ''} />
 
         {/* header */}
-        <div className="mb-5 flex items-center justify-between">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Link href="/challenges" className="text-muted hover:text-fg">
               <ChevronLeft className="h-5 w-5" />
             </Link>
-            <h1 className="text-[17px] font-semibold text-fg">Create challenge</h1>
+            <h1 className="text-[17px] font-semibold text-fg">{heading}</h1>
           </div>
-          <span className="text-[13px] font-bold text-accent">Zai</span>
-        </div>
-        <div className="mb-6 flex gap-7 border-b border-border-soft text-[13px]">
-          <span className="border-b-2 border-accent pb-2 font-medium text-accent">Challenge</span>
-          <span className="cursor-default pb-2 text-faint">Invites</span>
-          <span className="cursor-default pb-2 text-faint">Leaderboard</span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/zai.png" alt="Zai" className="h-6 w-auto" />
         </div>
 
-        <div className="space-y-5">
-          {/* text block */}
-          <div className="overflow-hidden rounded-[var(--radius-control)]">
-            <FilledField label="Headline" hint="Max 40 characters — required">
-              <TextInput
-                name="title"
-                maxLength={40}
-                required
-                defaultValue={p?.title ?? ''}
-                placeholder="Set a unique, memorable name"
-              />
-            </FilledField>
-          </div>
-          <FilledField label="Ingress" hint="Max 200 characters">
+        {/* tabs */}
+        <div className="flex justify-between border-b border-border-soft text-[14px]">
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setTab(t.id)}
+              className={cn(
+                'pb-2',
+                tab === t.id
+                  ? 'border-b-2 border-accent font-semibold text-accent'
+                  : 'text-muted hover:text-fg',
+              )}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {state.error && <p className="text-[12px] text-danger">{sentence(state.error)}</p>}
+
+        {/* ============ CHALLENGE ============ */}
+        <div className={cn('space-y-5', tab !== 'challenge' && 'hidden')}>
+          <FilledField label="Headline" hint="Max 40 signs — required" clearable>
+            <TextInput
+              name="title"
+              maxLength={40}
+              defaultValue={p?.title ?? ''}
+              placeholder="Set a unique and memorable name for the Challenge"
+              className="pr-7"
+            />
+          </FilledField>
+
+          <FilledField label="Ingress" hint="Max 200 signs" clearable>
             <TextInput
               name="ingress"
               maxLength={200}
               defaultValue={p?.ingress ?? ''}
-              placeholder="Describe why to run this challenge"
-            />
-          </FilledField>
-          <FilledField label="Description">
-            <TextArea
-              name="description"
-              rows={4}
-              defaultValue={p?.description ?? ''}
-              placeholder="How to run and fulfil it, and the reward for finishing"
+              placeholder="Describe why to run this Challenge"
+              className="pr-7"
             />
           </FilledField>
 
-          {/* result model */}
-          <div className="grid gap-3 sm:grid-cols-3">
-            <FilledField label="Result type">
-              <SelectInput name="resultType" defaultValue={p?.resultType ?? 'count'}>
-                {RESULT_TYPES.map((r) => (
-                  <option key={r.value} value={r.value}>
-                    {r.label}
-                  </option>
-                ))}
-              </SelectInput>
-            </FilledField>
-            <FilledField label="Unit">
-              <SelectInput name="resultUnit" defaultValue={p?.resultUnit ?? 'reps'}>
-                {RESULT_UNITS.map((u) => (
-                  <option key={u} value={u}>
-                    {u}
-                  </option>
-                ))}
-              </SelectInput>
-            </FilledField>
-            <FilledField label="Scoring">
-              <SelectInput
-                name="scoringDirection"
-                defaultValue={p?.scoringDirection ?? 'higher_better'}
+          {/* description with formatting bar */}
+          <div>
+            <span className={sectionLabel}>Description</span>
+            <div className="relative overflow-hidden rounded-[var(--radius-control)] bg-field/80 ring-1 ring-white/[0.04] focus-within:ring-primary/50">
+              <RichTextToolbar />
+              <TextArea
+                name="description"
+                rows={5}
+                defaultValue={p?.description ?? ''}
+                placeholder="Write a description of this Challenge, how to run and fulfil it with ev. rewards for the winner or to those that fulfil it in time"
+                className="px-3.5 py-3"
+              />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/zai.png"
+                alt="Zai"
+                className="pointer-events-none absolute bottom-2 right-3 h-4 w-auto opacity-80"
+              />
+            </div>
+          </div>
+
+          {/* media row */}
+          <div className="flex items-center gap-3">
+            {MEDIA.map(({ icon: Icon, label: l }) => (
+              <span
+                key={l}
+                title={l}
+                className="flex h-10 w-10 items-center justify-center rounded-[var(--radius-control)] bg-field/80 text-muted ring-1 ring-white/[0.04]"
               >
-                {SCORING.map((sc) => (
-                  <option key={sc.value} value={sc.value}>
-                    {sc.label}
-                  </option>
-                ))}
-              </SelectInput>
-            </FilledField>
+                <Icon className="h-[18px] w-[18px]" />
+              </span>
+            ))}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/zai.png" alt="Zai" className="ml-auto h-5 w-auto" />
           </div>
 
           {/* time + location */}
           <div className="grid gap-3 sm:grid-cols-2">
-            <FilledField label="Time (minutes)">
-              <TextInput
-                name="durationMinutes"
-                type="number"
-                min={1}
-                defaultValue={p?.durationMinutes ?? 20}
-              />
+            <FilledField label="Time">
+              <SelectInput name="durationMinutes" defaultValue={p?.durationMinutes ?? 20}>
+                {TIME_OPTIONS.map((m) => (
+                  <option key={m} value={m}>
+                    {m} min
+                  </option>
+                ))}
+              </SelectInput>
             </FilledField>
             <FilledField label="Location">
               <SelectInput name="location" defaultValue={p?.location ?? 'anywhere'}>
@@ -144,116 +209,188 @@ export function CreateChallengeForm({ prefill }: { prefill: ChallengePrefill | n
 
           {/* dates */}
           <div className="grid gap-3 sm:grid-cols-2">
-            <FilledField label="Start date">
+            <FilledField label="Start Date">
               <TextInput name="startDate" type="date" defaultValue={start.date} />
             </FilledField>
-            <FilledField label="Start time">
+            <FilledField label="Start Time" right={<Clock className="h-4 w-4" />}>
               <TextInput name="startTime" type="time" defaultValue={start.time} />
             </FilledField>
-            <FilledField label="End date">
+            <FilledField label="End Date">
               <TextInput name="endDate" type="date" defaultValue={end.date} />
             </FilledField>
-            <FilledField label="End time">
+            <FilledField label="End Time" right={<Clock className="h-4 w-4" />}>
               <TextInput name="endTime" type="time" defaultValue={end.time} />
             </FilledField>
           </div>
 
           {/* points */}
           <div>
-            <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-faint">
-              Points to participate
-            </p>
+            <span className={sectionLabel}>Points to participate</span>
             <PointsSlider name="pointsToParticipate" defaultValue={p?.pointsToParticipate ?? 10} />
           </div>
 
-          {/* details */}
-          <div className="pt-2 text-center text-[13px] font-semibold text-fg">Challenge details</div>
+          {/* ---- Challenge details ---- */}
+          <div className="border-t border-border-soft pt-5">
+            <p className="mb-4 text-center text-[14px] font-semibold text-fg">Challenge details</p>
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <FilledField label="Min. participants">
-              <TextInput
-                name="minParticipants"
-                type="number"
-                min={1}
-                defaultValue={p?.minParticipants ?? 2}
-              />
-            </FilledField>
-            <FilledField label="Reward points">
-              <TextInput
-                name="rewardPoints"
-                type="number"
-                min={0}
-                defaultValue={p?.rewardPoints ?? 50}
-              />
-            </FilledField>
-            <FilledField label="Age from">
-              <TextInput name="ageFrom" type="number" min={0} defaultValue={p?.ageFrom} placeholder="Any" />
-            </FilledField>
-            <FilledField label="Age to">
-              <TextInput name="ageTo" type="number" min={0} defaultValue={p?.ageTo} placeholder="Any" />
-            </FilledField>
-            <FilledField label="Target position" className="sm:col-span-2">
-              <TextInput
-                name="position"
-                defaultValue={p?.position ?? ''}
-                placeholder="e.g. Forwards — leave blank for all"
-              />
-            </FilledField>
+            <div className="space-y-5">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <FilledField label="Min Participants">
+                  <TextInput
+                    name="minParticipants"
+                    type="number"
+                    min={1}
+                    defaultValue={p?.minParticipants ?? 2}
+                  />
+                </FilledField>
+                <FilledField label="Target group">
+                  <SelectInput name="position" defaultValue={p?.position || ''}>
+                    {TARGET_GROUPS.map((g) => (
+                      <option key={g} value={g === 'All' ? '' : g}>
+                        {g}
+                      </option>
+                    ))}
+                  </SelectInput>
+                </FilledField>
+                <FilledField label="Age from">
+                  <SelectInput name="ageFrom" defaultValue={p?.ageFrom ?? ''}>
+                    <option value="">All</option>
+                    {AGE_OPTIONS.map((a) => (
+                      <option key={a} value={a}>
+                        {a}
+                      </option>
+                    ))}
+                  </SelectInput>
+                </FilledField>
+                <FilledField label="Age to">
+                  <SelectInput name="ageTo" defaultValue={p?.ageTo ?? ''}>
+                    <option value="">All</option>
+                    {AGE_OPTIONS.map((a) => (
+                      <option key={a} value={a}>
+                        {a}
+                      </option>
+                    ))}
+                  </SelectInput>
+                </FilledField>
+              </div>
+
+              {/* result model — not in the Figma image but required by the API when no template */}
+              <div className="grid gap-3 sm:grid-cols-3">
+                <FilledField label="Result type">
+                  <SelectInput name="resultType" defaultValue={p?.resultType ?? 'count'}>
+                    {RESULT_TYPES.map((r) => (
+                      <option key={r.value} value={r.value}>
+                        {r.label}
+                      </option>
+                    ))}
+                  </SelectInput>
+                </FilledField>
+                <FilledField label="Unit">
+                  <SelectInput name="resultUnit" defaultValue={p?.resultUnit ?? 'reps'}>
+                    {RESULT_UNITS.map((u) => (
+                      <option key={u} value={u}>
+                        {u}
+                      </option>
+                    ))}
+                  </SelectInput>
+                </FilledField>
+                <FilledField label="Scoring">
+                  <SelectInput
+                    name="scoringDirection"
+                    defaultValue={p?.scoringDirection ?? 'higher_better'}
+                  >
+                    {SCORING.map((sc) => (
+                      <option key={sc.value} value={sc.value}>
+                        {sc.label}
+                      </option>
+                    ))}
+                  </SelectInput>
+                </FilledField>
+              </div>
+              <FilledField label="Reward points">
+                <TextInput
+                  name="rewardPoints"
+                  type="number"
+                  min={0}
+                  defaultValue={p?.rewardPoints ?? 50}
+                />
+              </FilledField>
+
+              <div>
+                <span className={sectionLabel}>Tags</span>
+                <TagPicker
+                  name="equipmentTags"
+                  options={EQUIPMENT_TAGS}
+                  defaultValue={p?.equipmentTags ?? []}
+                />
+              </div>
+
+              <div>
+                <span className={sectionLabel}>Main Category</span>
+                <Segmented
+                  name="mainCategory"
+                  options={MAIN_CATEGORIES}
+                  defaultValue={p?.mainCategory ?? 'other'}
+                  columns={4}
+                />
+              </div>
+
+              <div>
+                <span className={sectionLabel}>Add to Collections as</span>
+                <MultiPill
+                  name="collections"
+                  options={COLLECTIONS}
+                  defaultValue={p?.collections ?? []}
+                />
+              </div>
+
+              <div>
+                <span className={sectionLabel}>Share with</span>
+                <Segmented
+                  name="visibility"
+                  options={shareOptions}
+                  defaultValue={
+                    shareOptions.some((o) => o.value === p?.visibility)
+                      ? p!.visibility!
+                      : 'private'
+                  }
+                  columns={4}
+                />
+                <p className="mt-1 pl-1 text-[11px] text-faint">
+                  {canPublishToAll
+                    ? '“All” publishes to every player. Private keeps it to the people you invite.'
+                    : 'Private keeps it to the people you invite. Publishing to everyone (“All”) is admin-only.'}
+                </p>
+              </div>
+            </div>
           </div>
+        </div>
 
-          <div className="space-y-2">
-            <p className="text-[11px] font-medium uppercase tracking-wide text-faint">Tags</p>
-            <TagPicker
-              name="equipmentTags"
-              options={EQUIPMENT_TAGS}
-              defaultValue={p?.equipmentTags ?? []}
-            />
-          </div>
+        {/* ============ INVITES ============ */}
+        <div className={cn(tab !== 'invites' && 'hidden')}>
+          <InvitesPanel />
+        </div>
 
-          <div className="space-y-2">
-            <p className="text-[11px] font-medium uppercase tracking-wide text-faint">Main category</p>
-            <Segmented
-              name="mainCategory"
-              options={MAIN_CATEGORIES}
-              defaultValue={p?.mainCategory ?? 'other'}
-              columns={3}
-            />
-          </div>
+        {/* ============ LEADERBOARD ============ */}
+        <div className={cn(tab !== 'leaderboard' && 'hidden')}>
+          <LeaderboardBoard entries={[]} />
+        </div>
 
-          <div className="space-y-2">
-            <p className="text-[11px] font-medium uppercase tracking-wide text-faint">
-              Add to collections as
-            </p>
-            <MultiPill
-              name="collections"
-              options={COLLECTIONS}
-              defaultValue={p?.collections ?? []}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <p className="text-[11px] font-medium uppercase tracking-wide text-faint">Share with</p>
-            <Segmented name="visibility" options={VISIBILITIES} defaultValue="private" columns={4} />
-            <p className="pl-1 text-[11px] text-faint">
-              “All” publishes to every player — admin only. Private keeps it to the people you invite.
-            </p>
-          </div>
-
-          {state.error && <p className="text-[12px] text-danger">{state.error}</p>}
-
-          <div className="grid grid-cols-[1fr_1.4fr] gap-3 pt-1">
+        {/* sticky footer */}
+        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border-soft bg-canvas lg:pl-64">
+          <div className="mx-auto grid max-w-3xl grid-cols-[1fr_1.6fr] gap-3 px-4 py-3 sm:px-6">
             <Link
               href="/challenges"
-              className="flex h-10 items-center justify-center rounded-[var(--radius-control)] border border-border text-[13px] text-fg hover:bg-surface-2"
+              className="flex h-11 items-center justify-center rounded-[var(--radius-control)] border border-border text-[13px] font-medium text-fg hover:bg-surface-2"
             >
-              Cancel
+              Save draft
             </Link>
             <button
               type="submit"
               disabled={pending}
-              className="h-10 rounded-[var(--radius-control)] bg-primary text-[13px] font-medium text-white hover:bg-primary-hover disabled:opacity-50"
+              className="h-11 rounded-[var(--radius-control)] bg-primary text-[13px] font-semibold text-white hover:bg-primary-hover disabled:opacity-50"
             >
-              {pending ? 'Publishing…' : 'Save & publish'}
+              {pending ? pendingLabel : submitLabel}
             </button>
           </div>
         </div>

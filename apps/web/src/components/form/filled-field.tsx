@@ -1,35 +1,62 @@
-import type {
-  InputHTMLAttributes,
-  ReactNode,
-  SelectHTMLAttributes,
-  TextareaHTMLAttributes,
-} from 'react';
-import { cn } from '@/components/ui/cn';
-import { ChevronDown } from 'lucide-react';
+'use client';
 
-/** The Figma field: a filled dark box with a small label floating top-left. */
+import { useRef, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
+import { ChevronDown, CircleX } from 'lucide-react';
+import { cn } from '@/components/ui/cn';
+
+/**
+ * The Figma create-form field: a small label above a dark filled box, an
+ * optional hint below, an optional trailing adornment, and an optional
+ * circular clear button (clears the box's input/textarea).
+ */
 export function FilledField({
   label,
   hint,
   right,
+  clearable,
   className,
   children,
 }: {
   label: string;
   hint?: string;
   right?: ReactNode;
+  clearable?: boolean;
   className?: string;
   children: ReactNode;
 }) {
+  const box = useRef<HTMLDivElement>(null);
+  const clear = () => {
+    const el = box.current?.querySelector<HTMLInputElement | HTMLTextAreaElement>(
+      'input, textarea',
+    );
+    if (el) {
+      el.value = '';
+      el.focus();
+    }
+  };
+
   return (
     <div className={className}>
-      <div className="relative rounded-[var(--radius-control)] bg-surface-2 px-3.5 pt-5 pb-2 focus-within:ring-1 focus-within:ring-primary/50">
-        <span className="pointer-events-none absolute left-3.5 top-2 text-[10.5px] font-medium uppercase tracking-wide text-faint">
-          {label}
-        </span>
+      <span className="mb-1 block pl-1 text-[11px] font-medium text-faint">{label}</span>
+      <div
+        ref={box}
+        className="relative rounded-[var(--radius-control)] bg-field/80 px-3.5 py-2.5 ring-1 ring-white/[0.04] focus-within:ring-primary/50"
+      >
         {children}
+        {clearable && (
+          <button
+            type="button"
+            onClick={clear}
+            aria-label={`Clear ${label}`}
+            className="absolute right-2.5 top-2.5 text-faint transition-colors hover:text-fg"
+          >
+            <CircleX className="h-[18px] w-[18px]" />
+          </button>
+        )}
         {right && (
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted">{right}</span>
+          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted">
+            {right}
+          </span>
         )}
       </div>
       {hint && <p className="mt-1 pl-1 text-[11px] text-faint">{hint}</p>}

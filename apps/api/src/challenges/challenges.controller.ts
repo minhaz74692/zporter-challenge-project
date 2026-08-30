@@ -1,9 +1,11 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   Param,
+  Patch,
   Post,
   Query,
   UploadedFile,
@@ -24,6 +26,7 @@ import type { AuthenticatedUser } from '../auth/types.js';
 import { SubmitResultDto } from '../results/dto/submit-result.dto.js';
 import { ChallengesService } from './challenges.service.js';
 import { CreateChallengeDto } from './dto/create-challenge.dto.js';
+import { UpdateChallengeDto } from './dto/update-challenge.dto.js';
 import { InviteDto } from './dto/invite.dto.js';
 import { ListChallengesQuery } from './dto/list-challenges.query.js';
 
@@ -74,6 +77,28 @@ export class ChallengesController {
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<Challenge> {
     return this.challenges.create(dto, user);
+  }
+
+  /** Edit a challenge (owner or admin). */
+  @Patch(':id')
+  @Roles('coach', 'admin')
+  update(
+    @Param('id') id: string,
+    @Body() dto: UpdateChallengeDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<Challenge> {
+    return this.challenges.update(id, dto, user);
+  }
+
+  /** Delete a challenge (owner or admin). */
+  @Delete(':id')
+  @Roles('coach', 'admin')
+  @HttpCode(204)
+  remove(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<void> {
+    return this.challenges.remove(id, user);
   }
 
   @Post(':id/accept')

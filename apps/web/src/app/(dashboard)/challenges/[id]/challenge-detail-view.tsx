@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useCallback, useState } from 'react';
 import type {
   ChallengeDetail,
@@ -10,8 +11,10 @@ import type {
 } from '@zporter/shared';
 import { cn } from '@/components/ui/cn';
 import { Pill } from '@/components/ui/pill';
+import { deleteChallenge } from '../actions';
 import { CoverUpload } from '@/components/challenges/cover-upload';
 import { InvitePanel } from '@/components/challenges/invite-panel';
+import { LeaderboardBoard } from '@/components/challenges/leaderboard-board';
 
 const STATUS_TONE = { draft: 'neutral', active: 'success', ended: 'danger' } as const;
 const INVITE_TONE: Record<InviteState, Parameters<typeof Pill>[0]['tone']> = {
@@ -104,12 +107,34 @@ export function ChallengeDetailView({
       </div>
 
       {isOwner && (
-        <div className="mt-5 border-t border-border-soft pt-4">
-          <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-faint">
-            Cover image
-          </p>
-          <CoverUpload challengeId={challenge.id} current={challenge.mediaImageUrl} />
-        </div>
+        <>
+          <div className="mt-5 flex gap-2">
+            <Link
+              href={`/challenges/${challenge.id}/edit`}
+              className="inline-flex h-9 items-center rounded-[var(--radius-control)] border border-border px-4 text-[13px] font-medium text-fg hover:bg-surface-2"
+            >
+              Edit
+            </Link>
+            <form action={deleteChallenge.bind(null, challenge.id)}>
+              <button
+                type="submit"
+                onClick={(e) => {
+                  if (!window.confirm('Delete this challenge permanently?')) e.preventDefault();
+                }}
+                className="inline-flex h-9 items-center rounded-[var(--radius-control)] px-4 text-[13px] font-medium text-danger hover:bg-danger/10"
+              >
+                Delete
+              </button>
+            </form>
+          </div>
+
+          <div className="mt-5 border-t border-border-soft pt-4">
+            <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-faint">
+              Cover image
+            </p>
+            <CoverUpload challengeId={challenge.id} current={challenge.mediaImageUrl} />
+          </div>
+        </>
       )}
 
       <div className="mt-5 mb-4 flex gap-6 border-b border-border-soft text-[13px]">
@@ -189,26 +214,7 @@ export function ChallengeDetailView({
           {leaderboard.loading && !leaderboard.data ? (
             <p className="py-4 text-[13px] text-faint">Loading leaderboard…</p>
           ) : (
-            <ol className="space-y-1.5">
-              {leaderboard.data?.length === 0 && (
-                <li className="py-4 text-[13px] text-muted">No results reported yet.</li>
-              )}
-              {leaderboard.data?.map((e) => (
-                <li
-                  key={e.userId}
-                  className="flex items-center justify-between rounded-[var(--radius-control)] bg-surface-2 px-3 py-2"
-                >
-                  <span className="flex items-center gap-3">
-                    <span className="w-5 text-center text-[12px] font-semibold text-accent">
-                      {e.rank}
-                    </span>
-                    <span className="text-[13px] text-fg">{e.displayName}</span>
-                    {e.club && <span className="text-[11px] text-faint">{e.club}</span>}
-                  </span>
-                  <span className="text-[13px] font-semibold text-fg">{e.value}</span>
-                </li>
-              ))}
-            </ol>
+            <LeaderboardBoard entries={leaderboard.data ?? []} />
           )}
         </>
       )}

@@ -27,6 +27,7 @@ import type { AuthenticatedUser } from '../auth/types.js';
 import { UsersService } from '../users/users.service.js';
 import { ChallengesRepository, type NewChallenge } from './challenges.repository.js';
 import type { CreateChallengeDto } from './dto/create-challenge.dto.js';
+import type { UpdateChallengeDto } from './dto/update-challenge.dto.js';
 import type { InviteDto } from './dto/invite.dto.js';
 
 const DEFAULT_UNIT: Record<ResultType, ResultUnit> = {
@@ -80,6 +81,59 @@ export class ChallengesService {
       await this.writeInvites(challenge, launchInvites);
     }
     return this.withCreator(challenge);
+  }
+
+  /** Edit an existing challenge (owner or admin). Full-form PATCH from the web. */
+  async update(
+    id: string,
+    dto: UpdateChallengeDto,
+    user: AuthenticatedUser,
+  ): Promise<Challenge> {
+    const challenge = await this.requireOwned(id, user);
+    if (dto.visibility === 'all' && user.role !== 'admin') {
+      throw new ForbiddenException('Only admins can publish a challenge to everyone');
+    }
+
+    const startAt = dto.startAt ?? challenge.startAt;
+    const deadline = dto.deadline ?? challenge.deadline;
+    if (Date.parse(deadline) <= Date.parse(startAt)) {
+      throw new BadRequestException('deadline must be after startAt');
+    }
+
+    const patch = this.definedOnly({
+      title: dto.title?.trim(),
+      ingress: dto.ingress?.trim(),
+      description: dto.description,
+      mainCategory: dto.mainCategory,
+      collections: dto.collections,
+      equipmentTags: dto.equipmentTags,
+      resultType: dto.resultType,
+      resultUnit: dto.resultUnit,
+      scoringDirection: dto.scoringDirection,
+      durationMinutes: dto.durationMinutes,
+      location: dto.location,
+      startAt: dto.startAt,
+      deadline: dto.deadline,
+      visibility: dto.visibility,
+      pointsToParticipate: dto.pointsToParticipate,
+      rewardPoints: dto.rewardPoints,
+      rewardBadgeId: dto.rewardBadgeId,
+      minParticipants: dto.minParticipants,
+      ageFrom: dto.ageFrom,
+      ageTo: dto.ageTo,
+      position: dto.position,
+      mediaImageUrl: dto.mediaImageUrl,
+      mediaVideoUrl: dto.mediaVideoUrl,
+    });
+
+    await this.repo.updateFields(id, patch);
+    return this.withCreator({ ...challenge, ...patch });
+  }
+
+  /** Delete a challenge (owner or admin). */
+  async remove(id: string, user: AuthenticatedUser): Promise<void> {
+    await this.requireOwned(id, user);
+    await this.repo.delete(id);
   }
 
   async invite(
@@ -213,6 +267,13 @@ export class ChallengesService {
       throw new ForbiddenException('Not your challenge');
     }
     return challenge;
+  }
+
+  /** Drop `undefined` values so Firestore `set(..., { merge: true })` won't choke. */
+  private definedOnly<T extends object>(obj: T): Partial<T> {
+    return Object.fromEntries(
+      Object.entries(obj).filter(([, v]) => v !== undefined),
+    ) as Partial<T>;
   }
 
   /** `active` challenges past their deadline read as `ended` (not persisted). */

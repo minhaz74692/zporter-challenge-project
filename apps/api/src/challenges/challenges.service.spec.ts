@@ -53,6 +53,14 @@ function build() {
     findManyByIds: vi.fn(async (ids: string[]) => challenges.filter((c) => ids.includes(c.id))),
     listPublic: vi.fn(async () => challenges.filter((c) => c.visibility === 'all')),
     leaderboard: vi.fn(async () => []),
+    updateFields: vi.fn(async (id: string, patch: Partial<Challenge>) => {
+      const c = challenges.find((x) => x.id === id);
+      if (c) Object.assign(c, patch);
+    }),
+    delete: vi.fn(async (id: string) => {
+      const i = challenges.findIndex((x) => x.id === id);
+      if (i >= 0) challenges.splice(i, 1);
+    }),
   };
   const participants = {
     listByUser: vi.fn(async (userId: string) => parts.filter((p) => p.userId === userId)),
@@ -165,6 +173,53 @@ describe('ChallengesService', () => {
       const notified = ctx.notifications.notify.mock.calls.map((call) => call[0].userId).sort();
       expect(notified).toEqual(['player1', 'player2']);
       expect(ctx.notifications.notify.mock.calls[0][0]).toMatchObject({ type: 'challenge_invite' });
+    });
+  });
+
+  describe('update / remove', () => {
+    it('403s when the caller does not own the challenge', async () => {
+      const c = await ctx.service.create({ startAt: PAST, deadline: FUTURE, templateId: 't' } as never, coach);
+      await expect(
+        ctx.service.update(c.id, { title: 'nope' } as never, { userId: 'coach2', role: 'coach' }),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
+    it('blocks a non-admin from switching visibility to all', async () => {
+      const c = await ctx.service.create({ startAt: PAST, deadline: FUTURE, templateId: 't' } as never, coach);
+      await expect(
+        ctx.service.update(c.id, { visibility: 'all' } as never, coach),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
+    it('validates deadline against the stored startAt when only deadline changes', async () => {
+      ctx.challenges.push(
+        makeChallenge({
+          id: 'c-far',
+          createdBy: 'coach1',
+          startAt: FUTURE,
+          deadline: '2099-06-01T00:00:00.000Z',
+        }),
+      );
+      await expect(
+        ctx.service.update('c-far', { deadline: PAST } as never, coach),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('applies a defined-only patch and returns the merged challenge', async () => {
+      const c = await ctx.service.create({ startAt: PAST, deadline: FUTURE, templateId: 't' } as never, coach);
+      const out = await ctx.service.update(c.id, { title: 'new title', ingress: undefined } as never, coach);
+      expect(out.title).toBe('new title');
+      const patch = ctx.repo.updateFields.mock.calls[0][1];
+      expect(patch).not.toHaveProperty('ingress');
+    });
+
+    it('remove: 403 for a non-owner, deletes for the owner', async () => {
+      const c = await ctx.service.create({ startAt: PAST, deadline: FUTURE, templateId: 't' } as never, coach);
+      await expect(
+        ctx.service.remove(c.id, { userId: 'x', role: 'player' }),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      await ctx.service.remove(c.id, coach);
+      expect(ctx.repo.delete).toHaveBeenCalledWith(c.id);
     });
   });
 

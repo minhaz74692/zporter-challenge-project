@@ -7,15 +7,17 @@ export class ApiError extends Error {
     readonly status: number,
     readonly body: unknown,
   ) {
-    super(`API ${status}`);
+    // Compute here: `Error` sets an own `message` property that would shadow a
+    // prototype getter, so the friendly text has to be passed to `super`.
+    super(ApiError.friendly(status, body));
     this.name = 'ApiError';
   }
 
-  /** First validation message, or the plain message. */
-  get message(): string {
-    const b = this.body as { message?: string | string[] } | null;
+  /** First validation message from the API body, else a generic line. */
+  private static friendly(status: number, body: unknown): string {
+    const b = body as { message?: string | string[] } | null;
     if (b?.message) return Array.isArray(b.message) ? b.message[0] : b.message;
-    return `Request failed (${this.status})`;
+    return status === 0 ? 'Cannot reach the API.' : `Request failed (${status}).`;
   }
 }
 

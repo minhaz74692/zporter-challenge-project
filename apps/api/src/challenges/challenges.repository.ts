@@ -56,6 +56,14 @@ export class ChallengesRepository {
     await this.col.doc(id).set(patch, { merge: true });
   }
 
+  /**
+   * Hard-delete the challenge document. Its `participants` / `leaderboard`
+   * sub-collections are left as harmless orphans — acceptable for the prototype.
+   */
+  async delete(id: string): Promise<void> {
+    await this.col.doc(id).delete();
+  }
+
   async create(data: NewChallenge): Promise<Challenge> {
     const ref = this.col.doc();
     const record: Challenge = {

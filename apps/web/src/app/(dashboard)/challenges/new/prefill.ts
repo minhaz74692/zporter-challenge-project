@@ -3,15 +3,16 @@ import type {
   ChallengeLocation,
   ChallengeMainCategory,
   ChallengeTemplate,
+  ChallengeVisibility,
   ResultType,
   ResultUnit,
   ScoringDirection,
 } from '@zporter/shared';
 
 /**
- * The subset of challenge content the create form pre-fills. Sourced from a
- * template ("copy from Library") or an existing challenge ("COPY" / relaunch);
- * the form itself stays agnostic to which.
+ * The subset of challenge content the create/edit form pre-fills. Sourced from a
+ * template ("copy from Library"), a challenge being copied/relaunched, or a
+ * challenge being edited; the form itself stays agnostic to which.
  */
 export interface ChallengePrefill {
   /** Set only when copying a template — lets the API merge gaps server-side. */
@@ -33,6 +34,10 @@ export interface ChallengePrefill {
   equipmentTags: string[];
   collections: string[];
   mainCategory: ChallengeMainCategory;
+  /** Edit mode only — keep the real schedule + audience. */
+  startAt?: string;
+  deadline?: string;
+  visibility?: ChallengeVisibility;
 }
 
 export function prefillFromTemplate(t: ChallengeTemplate): ChallengePrefill {
@@ -56,9 +61,12 @@ export function prefillFromTemplate(t: ChallengeTemplate): ChallengePrefill {
   };
 }
 
-export function prefillFromChallenge(c: Challenge): ChallengePrefill {
-  return {
-    title: `${c.title} (copy)`,
+export function prefillFromChallenge(
+  c: Challenge,
+  mode: 'copy' | 'edit' = 'copy',
+): ChallengePrefill {
+  const base: ChallengePrefill = {
+    title: mode === 'edit' ? c.title : `${c.title} (copy)`,
     ingress: c.ingress ?? '',
     description: c.description,
     resultType: c.resultType,
@@ -76,4 +84,10 @@ export function prefillFromChallenge(c: Challenge): ChallengePrefill {
     collections: c.collections,
     mainCategory: c.mainCategory,
   };
+  if (mode === 'edit') {
+    base.startAt = c.startAt;
+    base.deadline = c.deadline;
+    base.visibility = c.visibility;
+  }
+  return base;
 }

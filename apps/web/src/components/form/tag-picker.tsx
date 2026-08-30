@@ -38,7 +38,7 @@ export function TagPicker({
         </div>
       )}
       <div>
-        <p className="mb-2 text-[11px] text-faint">Popular tags</p>
+        <p className="mb-2 text-[11px] text-faint">Popular tags:</p>
         <div className="flex flex-wrap gap-2">
           {options
             .filter((o) => !selected.includes(o))

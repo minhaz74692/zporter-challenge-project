@@ -53,7 +53,22 @@ export const SCORING: { value: ScoringDirection; label: string }[] = [
   { value: 'lower_better', label: 'Lower is better' },
 ];
 
-export const POINT_STEPS = [5, 10, 20, 50, 100];
+export const POINT_STEPS = [5, 10, 20, 50, 100, 150];
+
+/** Figma "Time" dropdown — presets mapped to `durationMinutes`. */
+export const TIME_OPTIONS = [5, 10, 15, 20, 30, 45, 60, 90];
+
+/** Figma "Target group" dropdown — mapped to `position` ("All" → unset). */
+export const TARGET_GROUPS = [
+  'All',
+  'Goalkeepers',
+  'Defenders',
+  'Midfielders',
+  'Forwards',
+];
+
+/** Figma "Age from" / "Age to" dropdowns ("All" → unset). */
+export const AGE_OPTIONS = [6, 8, 10, 12, 14, 16, 18, 21];
 
 export const COLLECTIONS = [
   'Ballcontrol', 'Build up', 'Activation', 'Set pieces', 'Passing',
