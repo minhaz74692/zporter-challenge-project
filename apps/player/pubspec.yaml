@@ -13,7 +13,6 @@ dependencies:
 
   # State management + DI
   flutter_riverpod: ^2.6.1
-  riverpod_annotation: ^2.6.1
 
   # Networking
   dio: ^5.7.0
@@ -24,9 +23,8 @@ dependencies:
   # Secure token storage
   flutter_secure_storage: ^9.2.2
 
-  # Models / serialization
-  freezed_annotation: ^3.0.0
-  json_annotation: ^4.9.0
+  # Value equality for entities (no code generation)
+  equatable: ^2.0.7
 
   # Typography — Inter, to match apps/web
   google_fonts: ^6.2.1
@@ -36,15 +34,19 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^5.0.0
 
-  # Codegen
-  build_runner: ^2.4.13
-  riverpod_generator: ^2.6.5
-  freezed: ^3.0.0
-  json_serializable: ^6.9.0
-
-  # Lints for Riverpod (surfaces provider misuse at analyze time)
-  custom_lint: ^0.7.5
-  riverpod_lint: ^2.6.5
+  # Generates platform app icons from assets/icon/ — run:
+  #   dart run flutter_launcher_icons
+  flutter_launcher_icons: ^0.14.1
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/images/
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  remove_alpha_ios: true
+  image_path: "assets/icon/icon.png"
+  adaptive_icon_background: "#1B1B1B"
+  adaptive_icon_foreground: "assets/icon/icon_foreground.png"

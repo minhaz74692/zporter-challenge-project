@@ -34,6 +34,11 @@ abstract final class AppTheme {
         elevation: 0,
         centerTitle: false,
       ),
+      // Kill the Material 3 hairline under the TabBar.
+      tabBarTheme: const TabBarThemeData(
+        dividerColor: Colors.transparent,
+        dividerHeight: 0,
+      ),
       cardTheme: CardThemeData(
         color: AppColors.surface,
         elevation: 0,

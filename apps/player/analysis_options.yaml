@@ -1,16 +1,6 @@
 # Static analysis config. Run: flutter analyze
 include: package:flutter_lints/flutter.yaml
 
-analyzer:
-  plugins:
-    - custom_lint
-  errors:
-    # Treat these as build-breaking — they catch real bugs.
-    invalid_annotation_target: ignore # noise from freezed/json_serializable
-  exclude:
-    - "**/*.g.dart"
-    - "**/*.freezed.dart"
-
 linter:
   rules:
     - always_declare_return_types

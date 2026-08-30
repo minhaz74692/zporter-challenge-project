@@ -19,6 +19,10 @@ abstract final class AppColors {
   static const border = Color(0xFF24252D);
   static const borderSoft = Color(0xFF1E1F26);
 
+  // Challenge card body — a top-to-bottom gradient (from the Figma card fill).
+  static const cardTop = Color(0xFF13161A);
+  static const cardBottom = Color(0xFF0D0F12);
+
   // Text, from most to least prominent.
   static const fg = Color(0xFFF3F4F7);
   static const muted = Color(0xFF8A8F9C);

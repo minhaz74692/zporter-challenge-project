@@ -59,6 +59,17 @@ class ApiException implements Exception {
   String toString() => 'ApiException($statusCode): $message';
 }
 
+/// Runs a Dio call and guarantees the only thing it can throw is an
+/// [ApiException]. Every repository method wraps its request in this.
+Future<T> guardApiCall<T>(Future<T> Function() request) async {
+  try {
+    return await request();
+  } on DioException catch (e) {
+    final mapped = e.error;
+    throw mapped is ApiException ? mapped : ApiException.fromDio(e);
+  }
+}
+
 /// Last interceptor in the chain: replaces any unrecovered [DioException] with
 /// an [ApiException] so repositories never see Dio's error types.
 class ErrorInterceptor extends Interceptor {
