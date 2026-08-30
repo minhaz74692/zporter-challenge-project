@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import type {
   ChallengeDetail,
   InviteState,
@@ -10,6 +10,8 @@ import type {
 } from '@zporter/shared';
 import { cn } from '@/components/ui/cn';
 import { Pill } from '@/components/ui/pill';
+import { CoverUpload } from '@/components/challenges/cover-upload';
+import { InvitePanel } from '@/components/challenges/invite-panel';
 
 const STATUS_TONE = { draft: 'neutral', active: 'success', ended: 'danger' } as const;
 const INVITE_TONE: Record<InviteState, Parameters<typeof Pill>[0]['tone']> = {
@@ -23,18 +25,48 @@ const RESULT_LABEL: Record<ResultState, string> = {
   completed: 'Completed',
 };
 
-const TABS = ['Details', 'Participants', 'Leaderboard'] as const;
+const BASE_TABS = ['Details', 'Participants', 'Leaderboard'] as const;
+type Tab = (typeof BASE_TABS)[number] | 'Invite';
+
+/** Cached, on-demand fetch of one JSON endpoint. */
+function useLazy<T>(url: string) {
+  const [data, setData] = useState<T | null>(null);
+  const [loading, setLoading] = useState(false);
+  const load = useCallback(
+    async (force = false) => {
+      if (loading || (data && !force)) return;
+      setLoading(true);
+      try {
+        const res = await fetch(url, { cache: 'no-store' });
+        setData(res.ok ? ((await res.json()) as T) : ([] as unknown as T));
+      } finally {
+        setLoading(false);
+      }
+    },
+    [url, loading, data],
+  );
+  return { data, loading, load };
+}
 
 export function ChallengeDetailView({
   challenge,
-  participants,
-  leaderboard,
+  isOwner = false,
 }: {
   challenge: ChallengeDetail;
-  participants: Participant[];
-  leaderboard: LeaderboardEntry[];
+  isOwner?: boolean;
 }) {
-  const [tab, setTab] = useState<(typeof TABS)[number]>('Details');
+  const tabs: Tab[] = isOwner ? [...BASE_TABS, 'Invite'] : [...BASE_TABS];
+  const [tab, setTab] = useState<Tab>('Details');
+
+  const participants = useLazy<Participant[]>(`/api/challenges/${challenge.id}/participants`);
+  const leaderboard = useLazy<LeaderboardEntry[]>(`/api/challenges/${challenge.id}/leaderboard`);
+
+  const selectTab = (t: Tab) => {
+    setTab(t);
+    if (t === 'Participants' || t === 'Invite') void participants.load();
+    if (t === 'Leaderboard') void leaderboard.load();
+  };
+
   const fmt = (d: string) =>
     new Date(d).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 
@@ -62,19 +94,30 @@ export function ChallengeDetailView({
         <span>⏱ {challenge.durationMinutes} min</span>
         <span>🏆 {challenge.rewardPoints} pts · entry {challenge.pointsToParticipate}</span>
         <span className="capitalize">{challenge.mainCategory}</span>
-        <span>{challenge.resultType} · {challenge.resultUnit}</span>
+        <span>
+          {challenge.resultType} · {challenge.resultUnit}
+        </span>
         <span className="capitalize">{challenge.visibility}</span>
       </div>
       <div className="mt-1 text-[12px] text-faint">
         {fmt(challenge.startAt)} → {fmt(challenge.deadline)}
       </div>
 
+      {isOwner && (
+        <div className="mt-5 border-t border-border-soft pt-4">
+          <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-faint">
+            Cover image
+          </p>
+          <CoverUpload challengeId={challenge.id} current={challenge.mediaImageUrl} />
+        </div>
+      )}
+
       <div className="mt-5 mb-4 flex gap-6 border-b border-border-soft text-[13px]">
-        {TABS.map((t) => (
+        {tabs.map((t) => (
           <button
             key={t}
             type="button"
-            onClick={() => setTab(t)}
+            onClick={() => selectTab(t)}
             className={cn(
               'pb-2',
               tab === t
@@ -110,52 +153,77 @@ export function ChallengeDetailView({
       )}
 
       {tab === 'Participants' && (
-        <ul className="divide-y divide-border-soft">
-          {participants.length === 0 && (
-            <li className="py-4 text-[13px] text-muted">No one invited yet.</li>
+        <>
+          {participants.loading && !participants.data ? (
+            <p className="py-4 text-[13px] text-faint">Loading participants…</p>
+          ) : (
+            <ul className="divide-y divide-border-soft">
+              {participants.data?.length === 0 && (
+                <li className="py-4 text-[13px] text-muted">No one invited yet.</li>
+              )}
+              {participants.data?.map((p) => (
+                <li key={p.userId} className="flex items-center justify-between py-2.5">
+                  <div>
+                    <div className="text-[13px] text-fg">{p.displayName}</div>
+                    <div className="text-[11px] text-faint">
+                      {p.handle}
+                      {p.club ? ` · ${p.club}` : ''}
+                      {p.position ? ` · ${p.position}` : ''}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] text-muted">{RESULT_LABEL[p.resultState]}</span>
+                    <Pill tone={INVITE_TONE[p.inviteState]} className="capitalize">
+                      {p.inviteState}
+                    </Pill>
+                  </div>
+                </li>
+              ))}
+            </ul>
           )}
-          {participants.map((p) => (
-            <li key={p.userId} className="flex items-center justify-between py-2.5">
-              <div>
-                <div className="text-[13px] text-fg">{p.displayName}</div>
-                <div className="text-[11px] text-faint">
-                  {p.handle}
-                  {p.club ? ` · ${p.club}` : ''}
-                  {p.position ? ` · ${p.position}` : ''}
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] text-muted">{RESULT_LABEL[p.resultState]}</span>
-                <Pill tone={INVITE_TONE[p.inviteState]} className="capitalize">
-                  {p.inviteState}
-                </Pill>
-              </div>
-            </li>
-          ))}
-        </ul>
+        </>
       )}
 
       {tab === 'Leaderboard' && (
-        <ol className="space-y-1.5">
-          {leaderboard.length === 0 && (
-            <li className="py-4 text-[13px] text-muted">No results reported yet.</li>
+        <>
+          {leaderboard.loading && !leaderboard.data ? (
+            <p className="py-4 text-[13px] text-faint">Loading leaderboard…</p>
+          ) : (
+            <ol className="space-y-1.5">
+              {leaderboard.data?.length === 0 && (
+                <li className="py-4 text-[13px] text-muted">No results reported yet.</li>
+              )}
+              {leaderboard.data?.map((e) => (
+                <li
+                  key={e.userId}
+                  className="flex items-center justify-between rounded-[var(--radius-control)] bg-surface-2 px-3 py-2"
+                >
+                  <span className="flex items-center gap-3">
+                    <span className="w-5 text-center text-[12px] font-semibold text-accent">
+                      {e.rank}
+                    </span>
+                    <span className="text-[13px] text-fg">{e.displayName}</span>
+                    {e.club && <span className="text-[11px] text-faint">{e.club}</span>}
+                  </span>
+                  <span className="text-[13px] font-semibold text-fg">{e.value}</span>
+                </li>
+              ))}
+            </ol>
           )}
-          {leaderboard.map((e) => (
-            <li
-              key={e.userId}
-              className="flex items-center justify-between rounded-[var(--radius-control)] bg-surface-2 px-3 py-2"
-            >
-              <span className="flex items-center gap-3">
-                <span className="w-5 text-center text-[12px] font-semibold text-accent">
-                  {e.rank}
-                </span>
-                <span className="text-[13px] text-fg">{e.displayName}</span>
-                {e.club && <span className="text-[11px] text-faint">{e.club}</span>}
-              </span>
-              <span className="text-[13px] font-semibold text-fg">{e.value}</span>
-            </li>
-          ))}
-        </ol>
+        </>
+      )}
+
+      {tab === 'Invite' && (
+        <div className="space-y-3">
+          <p className="text-[12px] text-muted">
+            Search players and send them this challenge. Already-invited players are hidden.
+          </p>
+          <InvitePanel
+            challengeId={challenge.id}
+            invitedIds={(participants.data ?? []).map((p) => p.userId)}
+            onInvited={() => void participants.load(true)}
+          />
+        </div>
       )}
     </div>
   );

@@ -1,6 +1,7 @@
 import type { User } from '@zporter/shared';
 import { logout } from '@/app/(auth)/actions';
-import { IconBell, IconChat, IconDiary, IconSearch } from '@/components/ui/icons';
+import { Bell, BookMarked, MessageSquare, Search } from 'lucide-react';
+import { MobileSidebar } from './mobile-sidebar';
 
 export function Topbar({ user, crumb }: { user: User; crumb?: string[] }) {
   const initials = user.displayName
@@ -11,41 +12,41 @@ export function Topbar({ user, crumb }: { user: User; crumb?: string[] }) {
   const trail = crumb ?? ['Home', 'Challenges'];
 
   return (
-    <header className="flex h-16 items-center justify-between border-b border-border-soft px-6">
-      <nav className="flex items-center gap-2 text-[13px] text-muted">
-        {trail.map((c, i) => (
-          <span key={c} className="flex items-center gap-2">
-            {i > 0 && <span className="text-faint">/</span>}
-            <span className={i === trail.length - 1 ? 'text-fg' : ''}>{c}</span>
-          </span>
-        ))}
-      </nav>
+    <header className="flex h-16 items-center justify-between gap-3 border-b border-border-soft px-4 lg:px-6">
+      <div className="flex min-w-0 items-center gap-2">
+        <MobileSidebar />
+        <nav className="flex items-center gap-2 truncate text-[13px] text-muted">
+          {trail.map((c, i) => (
+            <span key={c} className="flex items-center gap-2">
+              {i > 0 && <span className="text-faint">/</span>}
+              <span className={i === trail.length - 1 ? 'text-fg' : ''}>{c}</span>
+            </span>
+          ))}
+        </nav>
+      </div>
 
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-5 sm:gap-6">
         <button
           type="button"
-          className="inline-flex h-9 items-center gap-2 rounded-[var(--radius-pill)] bg-primary px-4 text-[13px] font-medium text-white hover:bg-primary-hover"
+          className="hidden h-11 items-center gap-2.5 rounded-xl bg-primary px-5 text-[14px] font-bold text-white hover:bg-primary-hover sm:inline-flex"
         >
-          <IconDiary className="h-4 w-4" />
+          <BookMarked className="h-[18px] w-[18px]" />
           Update diary
         </button>
-        <div className="flex items-center gap-3 text-muted">
-          <IconSearch className="h-[18px] w-[18px] cursor-pointer hover:text-fg" />
-          <span className="relative">
-            <IconBell className="h-[18px] w-[18px] cursor-pointer hover:text-fg" />
-            <span className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full bg-primary" />
-          </span>
-          <IconChat className="h-[18px] w-[18px] cursor-pointer hover:text-fg" />
+        <div className="hidden items-center gap-6 text-muted sm:flex">
+          <Search className="h-[22px] w-[22px] cursor-pointer hover:text-fg" />
+          <Bell className="h-[22px] w-[22px] cursor-pointer hover:text-fg" />
+          <MessageSquare className="h-[22px] w-[22px] cursor-pointer hover:text-fg" />
         </div>
-        <form action={logout} className="flex items-center gap-2">
-          <div className="hidden text-right leading-tight sm:block">
+        <form action={logout} className="flex items-center gap-2.5">
+          <div className="hidden text-right leading-tight lg:block">
             <div className="text-xs font-medium text-fg">{user.displayName}</div>
             <div className="text-[10px] text-faint">{user.handle}</div>
           </div>
           <button
             type="submit"
             title="Sign out"
-            className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-surface-2 text-xs font-semibold text-muted ring-1 ring-border transition hover:ring-danger/60"
+            className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-surface-2 text-xs font-semibold text-muted ring-1 ring-border transition hover:ring-danger/60"
           >
             {user.avatarUrl ? (
               // eslint-disable-next-line @next/next/no-img-element

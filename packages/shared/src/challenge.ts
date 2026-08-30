@@ -54,6 +54,9 @@ export interface Challenge {
   mediaVideoUrl?: string;
   ratingAverage?: number;
   ratingCount?: number;
+  /** Feed engagement counters (denormalised; server-maintained). */
+  likeCount: number;
+  commentCount: number;
   createdBy: string;
   /** Populated by the API on list + detail responses. */
   creator?: UserSummary;

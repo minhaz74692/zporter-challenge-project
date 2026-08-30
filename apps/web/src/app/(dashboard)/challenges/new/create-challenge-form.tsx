@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import { useActionState } from 'react';
-import type { ChallengeTemplate } from '@zporter/shared';
 import { createChallenge, type CreateState } from '../actions';
 import {
   COLLECTIONS,
@@ -19,7 +18,8 @@ import { Segmented } from '@/components/form/segmented';
 import { MultiPill } from '@/components/form/multi-pill';
 import { TagPicker } from '@/components/form/tag-picker';
 import { PointsSlider } from '@/components/form/points-slider';
-import { IconChevronLeft } from '@/components/ui/icons';
+import { ChevronLeft } from 'lucide-react';
+import type { ChallengePrefill } from './prefill';
 
 function iso(offsetDays: number) {
   const d = new Date();
@@ -27,11 +27,11 @@ function iso(offsetDays: number) {
   return { date: d.toISOString().slice(0, 10), time: '18:00' };
 }
 
-export function CreateChallengeForm({ template }: { template: ChallengeTemplate | null }) {
+export function CreateChallengeForm({ prefill }: { prefill: ChallengePrefill | null }) {
   const [state, action, pending] = useActionState<CreateState, FormData>(createChallenge, {});
   const start = iso(0);
   const end = iso(14);
-  const t = template;
+  const p = prefill;
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -39,13 +39,13 @@ export function CreateChallengeForm({ template }: { template: ChallengeTemplate 
         action={action}
         className="rounded-[var(--radius-panel)] border border-border bg-surface p-6 sm:p-8"
       >
-        <input type="hidden" name="templateId" value={t?.id ?? ''} />
+        <input type="hidden" name="templateId" value={p?.templateId ?? ''} />
 
         {/* header */}
         <div className="mb-5 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Link href="/challenges" className="text-muted hover:text-fg">
-              <IconChevronLeft className="h-5 w-5" />
+              <ChevronLeft className="h-5 w-5" />
             </Link>
             <h1 className="text-[17px] font-semibold text-fg">Create challenge</h1>
           </div>
@@ -65,7 +65,7 @@ export function CreateChallengeForm({ template }: { template: ChallengeTemplate 
                 name="title"
                 maxLength={40}
                 required
-                defaultValue={t?.title ?? ''}
+                defaultValue={p?.title ?? ''}
                 placeholder="Set a unique, memorable name"
               />
             </FilledField>
@@ -74,7 +74,7 @@ export function CreateChallengeForm({ template }: { template: ChallengeTemplate 
             <TextInput
               name="ingress"
               maxLength={200}
-              defaultValue={t?.ingress ?? ''}
+              defaultValue={p?.ingress ?? ''}
               placeholder="Describe why to run this challenge"
             />
           </FilledField>
@@ -82,7 +82,7 @@ export function CreateChallengeForm({ template }: { template: ChallengeTemplate 
             <TextArea
               name="description"
               rows={4}
-              defaultValue={t ? `${t.description}\n\n${t.rules}` : ''}
+              defaultValue={p?.description ?? ''}
               placeholder="How to run and fulfil it, and the reward for finishing"
             />
           </FilledField>
@@ -90,7 +90,7 @@ export function CreateChallengeForm({ template }: { template: ChallengeTemplate 
           {/* result model */}
           <div className="grid gap-3 sm:grid-cols-3">
             <FilledField label="Result type">
-              <SelectInput name="resultType" defaultValue={t?.resultType ?? 'count'}>
+              <SelectInput name="resultType" defaultValue={p?.resultType ?? 'count'}>
                 {RESULT_TYPES.map((r) => (
                   <option key={r.value} value={r.value}>
                     {r.label}
@@ -99,7 +99,7 @@ export function CreateChallengeForm({ template }: { template: ChallengeTemplate 
               </SelectInput>
             </FilledField>
             <FilledField label="Unit">
-              <SelectInput name="resultUnit" defaultValue={t?.resultUnit ?? 'reps'}>
+              <SelectInput name="resultUnit" defaultValue={p?.resultUnit ?? 'reps'}>
                 {RESULT_UNITS.map((u) => (
                   <option key={u} value={u}>
                     {u}
@@ -108,7 +108,10 @@ export function CreateChallengeForm({ template }: { template: ChallengeTemplate 
               </SelectInput>
             </FilledField>
             <FilledField label="Scoring">
-              <SelectInput name="scoringDirection" defaultValue={t?.scoringDirection ?? 'higher_better'}>
+              <SelectInput
+                name="scoringDirection"
+                defaultValue={p?.scoringDirection ?? 'higher_better'}
+              >
                 {SCORING.map((sc) => (
                   <option key={sc.value} value={sc.value}>
                     {sc.label}
@@ -125,11 +128,11 @@ export function CreateChallengeForm({ template }: { template: ChallengeTemplate 
                 name="durationMinutes"
                 type="number"
                 min={1}
-                defaultValue={t?.durationMinutes ?? 20}
+                defaultValue={p?.durationMinutes ?? 20}
               />
             </FilledField>
             <FilledField label="Location">
-              <SelectInput name="location" defaultValue={t?.location ?? 'anywhere'}>
+              <SelectInput name="location" defaultValue={p?.location ?? 'anywhere'}>
                 {LOCATIONS.map((l) => (
                   <option key={l.value} value={l.value}>
                     {l.label}
@@ -160,7 +163,7 @@ export function CreateChallengeForm({ template }: { template: ChallengeTemplate 
             <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-faint">
               Points to participate
             </p>
-            <PointsSlider name="pointsToParticipate" defaultValue={t?.pointsToParticipate ?? 10} />
+            <PointsSlider name="pointsToParticipate" defaultValue={p?.pointsToParticipate ?? 10} />
           </div>
 
           {/* details */}
@@ -168,24 +171,33 @@ export function CreateChallengeForm({ template }: { template: ChallengeTemplate 
 
           <div className="grid gap-3 sm:grid-cols-2">
             <FilledField label="Min. participants">
-              <TextInput name="minParticipants" type="number" min={1} defaultValue={2} />
+              <TextInput
+                name="minParticipants"
+                type="number"
+                min={1}
+                defaultValue={p?.minParticipants ?? 2}
+              />
             </FilledField>
             <FilledField label="Reward points">
               <TextInput
                 name="rewardPoints"
                 type="number"
                 min={0}
-                defaultValue={t?.rewardPoints ?? 50}
+                defaultValue={p?.rewardPoints ?? 50}
               />
             </FilledField>
             <FilledField label="Age from">
-              <TextInput name="ageFrom" type="number" min={0} placeholder="Any" />
+              <TextInput name="ageFrom" type="number" min={0} defaultValue={p?.ageFrom} placeholder="Any" />
             </FilledField>
             <FilledField label="Age to">
-              <TextInput name="ageTo" type="number" min={0} placeholder="Any" />
+              <TextInput name="ageTo" type="number" min={0} defaultValue={p?.ageTo} placeholder="Any" />
             </FilledField>
             <FilledField label="Target position" className="sm:col-span-2">
-              <TextInput name="position" placeholder="e.g. Forwards — leave blank for all" />
+              <TextInput
+                name="position"
+                defaultValue={p?.position ?? ''}
+                placeholder="e.g. Forwards — leave blank for all"
+              />
             </FilledField>
           </div>
 
@@ -194,7 +206,7 @@ export function CreateChallengeForm({ template }: { template: ChallengeTemplate 
             <TagPicker
               name="equipmentTags"
               options={EQUIPMENT_TAGS}
-              defaultValue={t?.equipmentTags ?? []}
+              defaultValue={p?.equipmentTags ?? []}
             />
           </div>
 
@@ -203,7 +215,7 @@ export function CreateChallengeForm({ template }: { template: ChallengeTemplate 
             <Segmented
               name="mainCategory"
               options={MAIN_CATEGORIES}
-              defaultValue={t?.mainCategory ?? 'other'}
+              defaultValue={p?.mainCategory ?? 'other'}
               columns={3}
             />
           </div>
@@ -215,7 +227,7 @@ export function CreateChallengeForm({ template }: { template: ChallengeTemplate 
             <MultiPill
               name="collections"
               options={COLLECTIONS}
-              defaultValue={t?.collections ?? []}
+              defaultValue={p?.collections ?? []}
             />
           </div>
 

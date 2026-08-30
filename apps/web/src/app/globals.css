@@ -7,7 +7,8 @@
  */
 @theme {
   --color-bg: #000000;
-  --color-sidebar: #0b0c10;
+  --color-canvas: #111115;
+  --color-sidebar: #111827;
   --color-surface: #14151a;
   --color-surface-2: #1c1d23;
   --color-surface-3: #24252d;
@@ -17,6 +18,8 @@
   --color-fg: #f3f4f7;
   --color-muted: #8a8f9c;
   --color-faint: #5c606c;
+
+  --color-pill-equip: #3a3c46;
 
   --color-primary: #4e5bf2;
   --color-primary-hover: #4049d6;

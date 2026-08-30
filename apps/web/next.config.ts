@@ -6,6 +6,8 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: 'firebasestorage.googleapis.com' },
+      // Stock cover photos used by the dev seed challenges.
+      { protocol: 'https', hostname: 'images.unsplash.com' },
     ],
   },
 };

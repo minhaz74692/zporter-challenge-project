@@ -5,7 +5,7 @@ import type {
   TextareaHTMLAttributes,
 } from 'react';
 import { cn } from '@/components/ui/cn';
-import { IconChevronDown } from '@/components/ui/icons';
+import { ChevronDown } from 'lucide-react';
 
 /** The Figma field: a filled dark box with a small label floating top-left. */
 export function FilledField({
@@ -58,7 +58,7 @@ export function SelectInput({
       <select className={cn(bare, 'appearance-none pr-6', className)} {...props}>
         {children}
       </select>
-      <IconChevronDown className="pointer-events-none absolute right-0 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+      <ChevronDown className="pointer-events-none absolute right-0 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
     </div>
   );
 }

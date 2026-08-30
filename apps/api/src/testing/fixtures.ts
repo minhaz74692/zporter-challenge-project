@@ -27,6 +27,8 @@ export function makeChallenge(over: Partial<Challenge> = {}): Challenge {
     minParticipants: 1,
     createdBy: 'coach1',
     participantCount: 0,
+    likeCount: 0,
+    commentCount: 0,
     createdAt: PAST,
     ...over,
   };

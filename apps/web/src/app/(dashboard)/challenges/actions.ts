@@ -1,6 +1,7 @@
 'use server';
 
 import { redirect } from 'next/navigation';
+import { revalidatePath } from 'next/cache';
 import type {
   Challenge,
   ChallengeLocation,
@@ -73,6 +74,55 @@ export async function createChallenge(
   redirect(`/challenges/${created.id}`);
 }
 
-export async function inviteToChallenge(challengeId: string, userIds: string[]): Promise<void> {
-  await api(`/challenges/${challengeId}/invite`, { body: { userIds } });
+export interface InviteState {
+  error?: string;
+  invited?: number;
+}
+
+/** Invite the selected players to a challenge (form Server Action). */
+export async function invitePlayers(
+  _prev: InviteState,
+  fd: FormData,
+): Promise<InviteState> {
+  const challengeId = str(fd, 'challengeId');
+  const userIds = fd.getAll('userIds').map(String).filter(Boolean);
+  if (!challengeId || userIds.length === 0) {
+    return { error: 'Pick at least one player.' };
+  }
+  try {
+    const { invited } = await api<{ invited: number }>(
+      `/challenges/${challengeId}/invite`,
+      { body: { userIds } },
+    );
+    revalidatePath(`/challenges/${challengeId}`);
+    return { invited };
+  } catch (e) {
+    return { error: e instanceof ApiError ? e.message : 'Could not send invites.' };
+  }
+}
+
+export interface CoverState {
+  error?: string;
+  ok?: boolean;
+}
+
+/** Upload / replace a challenge cover image (multipart Server Action). */
+export async function uploadCover(
+  challengeId: string,
+  _prev: CoverState,
+  fd: FormData,
+): Promise<CoverState> {
+  const file = fd.get('file');
+  if (!(file instanceof File) || file.size === 0) {
+    return { error: 'Choose an image first.' };
+  }
+  const forward = new FormData();
+  forward.append('file', file);
+  try {
+    await api(`/challenges/${challengeId}/cover`, { body: forward });
+    revalidatePath(`/challenges/${challengeId}`);
+    return { ok: true };
+  } catch (e) {
+    return { error: e instanceof ApiError ? e.message : 'Upload failed.' };
+  }
 }

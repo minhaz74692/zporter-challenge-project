@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { IconX } from '@/components/ui/icons';
+import { X } from 'lucide-react';
 
 /** Figma "Tags" — selected tags as blue pills, a grid of popular tags to add. */
 export function TagPicker({
@@ -31,7 +31,7 @@ export function TagPicker({
             >
               {t}
               <button type="button" onClick={() => remove(t)} aria-label={`Remove ${t}`}>
-                <IconX className="h-3 w-3" />
+                <X className="h-3 w-3" />
               </button>
             </span>
           ))}

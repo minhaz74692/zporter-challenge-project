@@ -12,8 +12,10 @@
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import type {
+  Challenge,
   ChallengeLocation,
   ChallengeMainCategory,
+  ChallengeVisibility,
   ResultType,
   ResultUnit,
   ScoringDirection,
@@ -164,6 +166,141 @@ const TEMPLATES: TemplateSeed[] = [
   },
 ];
 
+/**
+ * Live demo challenges (coach-owned, fixed ids, `.set()` idempotent). They give
+ * the web grid and the player discovery tabs realistic content — including Feed
+ * engagement counts and one already-ended challenge for the copy/relaunch flow.
+ */
+type ChallengeSeed = Omit<Challenge, 'createdBy' | 'createdAt' | 'startAt' | 'deadline'> & {
+  /** days from run time; negative = in the past */
+  startInDays: number;
+  deadlineInDays: number;
+};
+
+const seedChallenge = (
+  id: string,
+  title: string,
+  ingress: string,
+  description: string,
+  mainCategory: ChallengeMainCategory,
+  resultType: ResultType,
+  resultUnit: ResultUnit,
+  scoringDirection: ScoringDirection,
+  visibility: ChallengeVisibility,
+  cover: string,
+  extra: Partial<ChallengeSeed>,
+): ChallengeSeed => ({
+  id,
+  title,
+  ingress,
+  description,
+  mainCategory,
+  collections: [],
+  equipmentTags: [],
+  resultType,
+  resultUnit,
+  scoringDirection,
+  durationMinutes: 20,
+  location: 'field',
+  status: 'active',
+  visibility,
+  pointsToParticipate: 10,
+  rewardPoints: 50,
+  minParticipants: 2,
+  ageFrom: 8,
+  ageTo: 12,
+  position: 'All',
+  mediaImageUrl: cover,
+  participantCount: 0,
+  likeCount: 0,
+  commentCount: 0,
+  startInDays: -2,
+  deadlineInDays: 20,
+  ...extra,
+});
+
+const UNSPLASH = (photoId: string) =>
+  `https://images.unsplash.com/photo-${photoId}?auto=format&fit=crop&w=900&q=70`;
+
+const CHALLENGES: ChallengeSeed[] = [
+  seedChallenge(
+    'demo-keepie-uppies-century',
+    'Keepie-Uppies Century',
+    'How high can you count without the ball touching the ground?',
+    'One attempt, no hands, ball must not touch the ground. Report your best count.',
+    'technical', 'count', 'reps', 'higher_better', 'all',
+    UNSPLASH('1522778119026-d647f0596c20'),
+    {
+      collections: ['ballcontrol'],
+      equipmentTags: ['#Balls'],
+      durationMinutes: 10,
+      location: 'anywhere',
+      rewardPoints: 50,
+      rewardBadgeId: 'sharp-shooter',
+      likeCount: 48,
+      commentCount: 15,
+      ratingAverage: 4.6,
+      ratingCount: 22,
+    },
+  ),
+  seedChallenge(
+    'demo-40m-sprint',
+    '40m Sprint',
+    'Standing start to the 40m line — how fast?',
+    'Flat ground, standing start, stop the clock at 40m. Report seconds (one decimal).',
+    'physical', 'time', 'seconds', 'lower_better', 'all',
+    UNSPLASH('1461896836934-ffe607ba8211'),
+    {
+      collections: ['speed'],
+      equipmentTags: ['#Clock', '#Cones'],
+      durationMinutes: 5,
+      rewardPoints: 100,
+      rewardBadgeId: 'top-of-the-table',
+      likeCount: 31,
+      commentCount: 8,
+      ratingAverage: 4.2,
+      ratingCount: 13,
+    },
+  ),
+  seedChallenge(
+    'demo-cone-dribble-slalom',
+    'Cone Dribble Slalom',
+    'Eight cones, there and back, close control.',
+    '8 cones, 1m apart. Touch the ball at every gate. Report your fastest run.',
+    'technical', 'time', 'seconds', 'lower_better', 'friends',
+    UNSPLASH('1543326727-cf6c39e8f84c'),
+    {
+      collections: ['dribble'],
+      equipmentTags: ['#Cones', '#Balls'],
+      durationMinutes: 15,
+      rewardPoints: 60,
+      likeCount: 12,
+      commentCount: 3,
+    },
+  ),
+  seedChallenge(
+    'demo-weekly-training-log',
+    'Weekly Training Log',
+    'Did you complete every prescribed session this week?',
+    'Mark complete only if every session in your plan was done. Honesty system.',
+    'physical', 'boolean', 'boolean', 'higher_better', 'all',
+    UNSPLASH('1517838277536-f5f99be501cd'),
+    {
+      collections: ['strength'],
+      durationMinutes: 30,
+      location: 'anywhere',
+      rewardPoints: 40,
+      rewardBadgeId: 'iron-will',
+      likeCount: 64,
+      commentCount: 27,
+      ratingAverage: 4.8,
+      ratingCount: 41,
+      startInDays: -16,
+      deadlineInDays: -2,
+    },
+  ),
+];
+
 const TEAM = { id: 'team-falcons', name: 'Zporter Falcons U19' };
 const TEAM_MEMBER_EMAILS = [
   'coach@zporter.test',
@@ -224,6 +361,25 @@ async function seed(): Promise<void> {
       ),
     );
     logger.log(`upserted ${TEMPLATES.length} challenge templates`);
+
+    // --- Live demo challenges (coach-owned) ---
+    const daysFromNow = (n: number) => {
+      const d = new Date(Date.now() + n * 86_400_000);
+      d.setHours(18, 0, 0, 0);
+      return d.toISOString();
+    };
+    await Promise.all(
+      CHALLENGES.map(({ startInDays, deadlineInDays, ...challenge }) =>
+        db.collection('challenges').doc(challenge.id).set({
+          ...challenge,
+          startAt: daysFromNow(startInDays),
+          deadline: daysFromNow(deadlineInDays),
+          createdBy: coachId,
+          createdAt: now,
+        }),
+      ),
+    );
+    logger.log(`upserted ${CHALLENGES.length} demo challenges`);
 
     // --- Team + membership join ---
     await db.collection('teams').doc(TEAM.id).set({

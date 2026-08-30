@@ -13,7 +13,7 @@ const COLLECTION = 'challenges';
 /** Fields the repository writes (id/createdAt/participantCount/creator set elsewhere). */
 export type NewChallenge = Omit<
   Challenge,
-  'id' | 'createdAt' | 'participantCount' | 'creator'
+  'id' | 'createdAt' | 'participantCount' | 'creator' | 'likeCount' | 'commentCount'
 >;
 
 @Injectable()
@@ -61,6 +61,8 @@ export class ChallengesRepository {
     const record: Challenge = {
       id: ref.id,
       participantCount: 0,
+      likeCount: 0,
+      commentCount: 0,
       createdAt: new Date().toISOString(),
       ...data,
     };
@@ -123,6 +125,8 @@ export class ChallengesRepository {
       mediaVideoUrl: data.mediaVideoUrl,
       ratingAverage: data.ratingAverage,
       ratingCount: data.ratingCount,
+      likeCount: data.likeCount ?? 0,
+      commentCount: data.commentCount ?? 0,
       createdBy: data.createdBy,
       participantCount: data.participantCount ?? 0,
       createdAt: data.createdAt,

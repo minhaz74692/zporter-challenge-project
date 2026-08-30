@@ -1,11 +1,12 @@
 import type { HTMLAttributes } from 'react';
 import { cn } from './cn';
 
-type Tone = 'skill' | 'equip' | 'neutral' | 'success' | 'accent' | 'danger';
+type Tone = 'skill' | 'primary' | 'equip' | 'neutral' | 'success' | 'accent' | 'danger';
 
 const tones: Record<Tone, string> = {
   skill: 'bg-primary/15 text-primary',
-  equip: 'bg-pill-equip text-muted',
+  primary: 'bg-primary text-white',
+  equip: 'bg-pill-equip text-fg/80',
   neutral: 'bg-surface-2 text-muted',
   success: 'bg-success/15 text-success',
   accent: 'bg-accent/15 text-accent',

@@ -3,7 +3,7 @@ import type { Challenge } from '@zporter/shared';
 import { api } from '@/lib/api';
 import { ChallengeTabs } from '@/components/dashboard/challenge-tabs';
 import { ChallengeCard } from '@/components/challenges/challenge-card';
-import { IconPlus } from '@/components/ui/icons';
+import { Plus } from 'lucide-react';
 
 export default async function ChallengesPage() {
   const challenges = await api<Challenge[]>('/challenges/mine');
@@ -18,7 +18,7 @@ export default async function ChallengesPage() {
           href="/challenges/new"
           className="inline-flex h-9 items-center gap-2 rounded-[var(--radius-control)] bg-primary px-4 text-[13px] font-medium text-white hover:bg-primary-hover"
         >
-          <IconPlus className="h-4 w-4" />
+          <Plus className="h-4 w-4" />
           New challenge
         </Link>
       </div>
@@ -35,8 +35,8 @@ export default async function ChallengesPage() {
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {challenges.map((c) => (
-            <ChallengeCard key={c.id} challenge={c} />
+          {challenges.map((c, i) => (
+            <ChallengeCard key={c.id} challenge={c} priority={i < 3} />
           ))}
         </div>
       )}

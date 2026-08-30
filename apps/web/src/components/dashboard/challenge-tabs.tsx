@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/components/ui/cn';
-import { IconFilter, IconSearch } from '@/components/ui/icons';
+import { SlidersHorizontal, Search } from 'lucide-react';
 
 const TOP = ['Sessions', 'Exercises', 'Challenges'];
 const SUB = [
@@ -19,7 +19,7 @@ export function ChallengeTabs({ count }: { count?: number }) {
 
   return (
     <div className="mb-6 border-b border-border-soft">
-      <div className="flex gap-7 text-[13px]">
+      <div className="flex gap-7 overflow-x-auto text-[13px]">
         {TOP.map((t) => (
           <span
             key={t}
@@ -34,8 +34,8 @@ export function ChallengeTabs({ count }: { count?: number }) {
           </span>
         ))}
       </div>
-      <div className="mt-3 flex items-center justify-between pb-3">
-        <div className="flex items-center gap-6 text-[13px]">
+      <div className="mt-3 flex items-center justify-between gap-3 pb-3">
+        <div className="flex items-center gap-6 overflow-x-auto text-[13px]">
           {SUB.map((s) => {
             const active = s.href === '/challenges' ? onOwn : pathname.startsWith(s.href ?? '###');
             return s.href ? (
@@ -58,12 +58,14 @@ export function ChallengeTabs({ count }: { count?: number }) {
             );
           })}
         </div>
-        <div className="flex items-center gap-4 text-muted">
+        <div className="flex shrink-0 items-center gap-4 text-muted">
           {typeof count === 'number' && (
-            <span className="text-[13px] font-semibold text-success">{count} Challenges</span>
+            <span className="hidden text-[13px] font-semibold text-success sm:inline">
+              {count} Challenges
+            </span>
           )}
-          <IconSearch className="h-[18px] w-[18px]" />
-          <IconFilter className="h-[18px] w-[18px]" />
+          <Search className="h-[18px] w-[18px]" />
+          <SlidersHorizontal className="h-[18px] w-[18px]" />
         </div>
       </div>
     </div>
