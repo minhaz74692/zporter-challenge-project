@@ -44,6 +44,14 @@ export class ChallengesRepository {
     return snap.docs.map((d) => this.fromDoc(d));
   }
 
+  /** A creator's own challenges (Figma "Yours" tab). */
+  async listByCreator(userId: string): Promise<Challenge[]> {
+    const snap = await this.col.where('createdBy', '==', userId).get();
+    return snap.docs
+      .map((d) => this.fromDoc(d))
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }
+
   async updateFields(id: string, patch: Partial<Challenge>): Promise<void> {
     await this.col.doc(id).set(patch, { merge: true });
   }

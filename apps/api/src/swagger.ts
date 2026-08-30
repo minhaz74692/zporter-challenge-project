@@ -8,6 +8,11 @@ export const SWAGGER_PATH = 'docs';
  * Builds the OpenAPI document from the decorated controllers/DTOs. Kept separate
  * from {@link setupSwagger} so a future `generate-openapi` script can reuse it
  * without mounting the Swagger UI.
+ *
+ * NOTE: the `@nestjs/swagger` CLI plugin was removed from `nest-cli.json` — on
+ * this toolchain (TS 6 + swagger 12.0.1) it emits broken metadata (`enum: string`)
+ * that crashes the process at boot. Schemas come from the explicit `@ApiProperty`
+ * / class-validator decorators on the DTOs instead.
  */
 export function buildOpenApiDocument(app: INestApplication): OpenAPIObject {
   const config = new DocumentBuilder()

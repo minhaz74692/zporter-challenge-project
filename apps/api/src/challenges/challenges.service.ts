@@ -149,6 +149,12 @@ export class ChallengesService {
     return this.withCreators(filtered);
   }
 
+  /** A creator's own challenges, newest first, with `creator` embedded. */
+  async listMine(userId: string): Promise<Challenge[]> {
+    const challenges = await this.repo.listByCreator(userId);
+    return this.withCreators(challenges.map((c) => this.withComputedStatus(c)));
+  }
+
   async getDetail(
     challengeId: string,
     viewer: AuthenticatedUser,

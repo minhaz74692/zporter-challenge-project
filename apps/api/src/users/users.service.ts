@@ -87,6 +87,12 @@ export class UsersService {
   search(query: string): Promise<UserRecord[]> {
     return this.repo.search(query);
   }
+
+  /** Invite-picker search — trimmed shape, no email. */
+  async searchSummaries(query: string): Promise<UserSummary[]> {
+    const rows = await this.repo.search(query);
+    return rows.map(toUserSummary);
+  }
 }
 
 function normalizeEmail(email: string): string {

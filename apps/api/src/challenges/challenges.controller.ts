@@ -11,7 +11,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiTags } from '@nestjs/swagger';
-import { parseImageUpload } from '../storage/image-upload.pipe.js';
+import { parseImageUpload, type MulterFile } from '../storage/image-upload.pipe.js';
 import type {
   Challenge,
   ChallengeDetail,
@@ -40,6 +40,13 @@ export class ChallengesController {
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<Challenge[]> {
     return this.challenges.listByCategory(user.userId, query.category);
+  }
+
+  /** Challenges the caller created (Figma "Yours" tab). Declared before `:id`. */
+  @Get('mine')
+  @Roles('coach', 'admin')
+  mine(@CurrentUser() user: AuthenticatedUser): Promise<Challenge[]> {
+    return this.challenges.listMine(user.userId);
   }
 
   @Get(':id')
@@ -117,7 +124,7 @@ export class ChallengesController {
   })
   setCover(
     @Param('id') id: string,
-    @UploadedFile(parseImageUpload) file: Express.Multer.File,
+    @UploadedFile(parseImageUpload) file: MulterFile,
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<Challenge> {
     return this.challenges.setCover(id, user, file);
