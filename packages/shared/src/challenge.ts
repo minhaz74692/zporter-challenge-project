@@ -34,16 +34,20 @@ export interface Challenge {
   createdAt: IsoDateTime;
 }
 
-/** Body of `POST /challenges`. Omitted fields fall back to the template. */
+/**
+ * Body of `POST /challenges`. When `templateId` is set, any omitted content
+ * field falls back to the template (merged server-side), so the content fields
+ * are optional here; `startAt` / `deadline` are always required.
+ */
 export interface CreateChallengeRequest {
   templateId?: string;
-  title: string;
-  description: string;
-  category: string;
-  resultType: ResultType;
-  scoringDirection: ScoringDirection;
-  rules: string;
-  reward: ChallengeReward;
+  title?: string;
+  description?: string;
+  category?: string;
+  resultType?: ResultType;
+  scoringDirection?: ScoringDirection;
+  rules?: string;
+  reward?: ChallengeReward;
   startAt: IsoDateTime;
   deadline: IsoDateTime;
   /** Defaults to `invited`. Only `admin` may create `global`. */
