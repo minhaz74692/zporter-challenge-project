@@ -62,6 +62,12 @@ export class UsersService {
     return toUserSummary(await this.getById(id));
   }
 
+  /** Resolve a `#Handle` to a user summary, or `null` if no such user. */
+  async summaryByHandle(handle: string): Promise<UserSummary | null> {
+    const user = await this.repo.findByHandle(handle.trim());
+    return user ? toUserSummary(user) : null;
+  }
+
   async setAvatar(userId: string, image: UploadedImage): Promise<User> {
     await this.getById(userId); // 404 if the user is gone
     const url = await this.storage.uploadImage({

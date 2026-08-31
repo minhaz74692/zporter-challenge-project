@@ -2,8 +2,13 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<!-- APNs. Xcode flips this to "production" for release/App Store builds. -->
+	<!-- APNs / Push Notifications. Disabled for on-device builds signed with a
+	     free "Personal Team" — Apple does not let personal teams provision the
+	     aps-environment entitlement. Re-add this key (value "development") once
+	     the app is signed by a paid Apple Developer Program team and iOS
+	     Firebase (GoogleService-Info.plist) is configured.
 	<key>aps-environment</key>
 	<string>development</string>
+	-->
 </dict>
 </plist>

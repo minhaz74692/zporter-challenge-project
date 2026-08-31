@@ -65,6 +65,10 @@ export type NotificationType =
   | 'challenge_invite'
   | 'challenge_launched'
   | 'result_submitted'
+  /** A player named you as the controller and wants their result verified. */
+  | 'result_verify_request'
+  /** Your controller verified (or rejected) your result. */
+  | 'result_verified'
   | 'challenge_ended'
   /** "closes in 48h — we have not seen your results yet" (needs a scheduler; type reserved). */
   | 'challenge_reminder';

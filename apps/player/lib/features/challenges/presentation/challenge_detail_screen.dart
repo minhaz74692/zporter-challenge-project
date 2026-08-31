@@ -8,6 +8,7 @@ import '../application/challenge_detail_provider.dart';
 import '../domain/challenge_detail.dart';
 import '../domain/challenge_enums.dart';
 import 'widgets/challenge_instructions_view.dart';
+import 'widgets/challenge_leaderboard_view.dart';
 import 'widgets/challenge_participants_view.dart';
 import 'widgets/challenge_report_view.dart';
 
@@ -24,15 +25,17 @@ class ChallengeDetailScreen extends ConsumerWidget {
     final detail = value.valueOrNull;
     final state = detail?.viewerParticipant?.inviteState;
 
-    // Declining ends your involvement — drop the "Add result" tab for it.
+    // Declining ends your involvement — drop the report tab for it.
     final showReportTab = state != InviteState.declined;
+    final hasSubmitted = detail?.viewerParticipant?.submittedResult != null;
     final showActionBar = detail != null &&
         (state == null || state == InviteState.invited);
 
     final tabLabels = [
       'Instructions',
-      if (showReportTab) 'Add result',
+      if (showReportTab) (hasSubmitted ? 'Report' : 'Add Result'),
       'Participants',
+      'Leaderboard',
     ];
 
     return DefaultTabController(
@@ -69,19 +72,16 @@ class ChallengeDetailScreen extends ConsumerWidget {
           value: value,
           onRetry: () => ref.invalidate(challengeDetailProvider(challengeId)),
           data: (detail) {
-            final vp = detail.viewerParticipant;
-            final canReport = (vp?.hasAccepted ?? false) &&
-                !(vp?.hasSubmitted ?? false) &&
-                !detail.challenge.hasEnded;
             return TabBarView(
               children: [
                 ChallengeInstructionsView(detail.challenge),
                 if (showReportTab)
                   ChallengeReportView(
                     challenge: detail.challenge,
-                    canReport: canReport,
+                    participant: detail.viewerParticipant,
                   ),
                 ChallengeParticipantsView(challengeId),
+                ChallengeLeaderboardView(challengeId),
               ],
             );
           },

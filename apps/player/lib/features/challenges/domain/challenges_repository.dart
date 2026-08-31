@@ -29,4 +29,11 @@ abstract interface class ChallengesRepository {
 
   /// Submit a result. Returns the caller's updated participant row.
   Future<Participant> submitResult(String id, SubmitResultRequest request);
+
+  /// The named controller approves / rejects [subjectUserId]'s result.
+  Future<void> verifyResult({
+    required String challengeId,
+    required String subjectUserId,
+    required bool approved,
+  });
 }

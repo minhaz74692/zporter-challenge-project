@@ -4,29 +4,31 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/util/formatters.dart';
+import '../../../../core/widgets/gradient_panel.dart';
 import '../../../../core/widgets/labeled_field.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../application/challenge_detail_provider.dart';
 import '../../application/challenge_list_provider.dart';
 import '../../application/submit_result.dart';
 import '../../domain/challenge.dart';
+import '../../domain/participant.dart';
 import '../../domain/result_strategy.dart';
 import 'result_video_field.dart';
 
-/// The "Add result" tab — the Figma report form: video documentation, the
-/// result value (dynamic by [Challenge.resultType]), when/where it was done,
-/// the controller, and Save.
+/// The "Add result" / "Report" tab. Three states, driven by the viewer's
+/// [ParticipantSummary]:
+/// - not accepted            → a prompt to accept first
+/// - accepted, no result yet → the Figma report form
+/// - result submitted        → a read-only summary of what was reported
 class ChallengeReportView extends ConsumerStatefulWidget {
   const ChallengeReportView({
     required this.challenge,
-    required this.canReport,
+    required this.participant,
     super.key,
   });
 
   final Challenge challenge;
-
-  /// The viewer has accepted and hasn't submitted yet.
-  final bool canReport;
+  final ParticipantSummary? participant;
 
   @override
   ConsumerState<ChallengeReportView> createState() =>
@@ -123,7 +125,8 @@ class _ChallengeReportViewState extends ConsumerState<ChallengeReportView> {
 
       if (!mounted) return;
       _snack('Challenge successfully reported');
-      DefaultTabController.of(context).animateTo(0);
+      // Stay on this tab — the detail refetch rebuilds it as the read-only
+      // result summary (and the tab renames to "Report").
     } on ResultValidationException catch (e) {
       _snack(e.message);
     } on ApiException catch (e) {
@@ -135,37 +138,41 @@ class _ChallengeReportViewState extends ConsumerState<ChallengeReportView> {
 
   @override
   Widget build(BuildContext context) {
-    // One continuous gradient panel with a rounded top, filling the tab body
-    // — same treatment as the Instructions tab.
+    final vp = widget.participant;
+    final submitted = vp?.submittedResult;
+
+    final Widget body;
+    if (submitted != null) {
+      body = _ResultSummary(result: submitted, rank: vp?.rank);
+    } else if (vp != null && vp.hasAccepted && !c.hasEnded) {
+      body = _form();
+    } else if (c.hasEnded) {
+      body = _message('This challenge has ended.');
+    } else {
+      body = _message('Accept this challenge to report a result.');
+    }
+
+    // One continuous gradient panel with a rounded top, filling the tab body.
     return LayoutBuilder(
       builder: (context, constraints) => SingleChildScrollView(
         child: ConstrainedBox(
           constraints: BoxConstraints(minHeight: constraints.maxHeight),
-          child: Container(
-            width: double.infinity,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [AppColors.cardTop, AppColors.cardBottom],
-              ),
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-            ),
+          child: GradientPanel(
             padding: const EdgeInsets.fromLTRB(16, 20, 16, 28),
-            child: widget.canReport ? _form() : _acceptFirst(),
+            child: body,
           ),
         ),
       ),
     );
   }
 
-  Widget _acceptFirst() => const Padding(
-    padding: EdgeInsets.symmetric(vertical: 48),
+  Widget _message(String text) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 48),
     child: Center(
       child: Text(
-        'Accept this challenge to report a result.',
+        text,
         textAlign: TextAlign.center,
-        style: TextStyle(color: AppColors.muted),
+        style: const TextStyle(color: AppColors.muted),
       ),
     ),
   );
@@ -305,4 +312,112 @@ class _StepArrow extends StatelessWidget {
     onTap: onTap,
     child: Icon(icon, size: 20, color: AppColors.muted),
   );
+}
+
+/// Read-only view of the result the player already reported.
+class _ResultSummary extends StatelessWidget {
+  const _ResultSummary({required this.result, this.rank});
+
+  final SubmittedResult result;
+  final int? rank;
+
+  String get _value {
+    final v = result.value;
+    if (v is bool) return v ? 'Completed' : 'Not completed';
+    return '$v ${result.unit.short}'.trim();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(
+              Icons.check_circle_rounded,
+              color: AppColors.success,
+              size: 22,
+            ),
+            const SizedBox(width: 8),
+            const Text(
+              'Result reported',
+              style: TextStyle(
+                color: AppColors.fg,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const Spacer(),
+            if (rank != null)
+              Text(
+                '#$rank',
+                style: const TextStyle(
+                  color: AppColors.success,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Text(
+          _value,
+          style: const TextStyle(
+            color: AppColors.fg,
+            fontSize: 30,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 20),
+        _Line(label: 'Performed', value: formatDateAtTime(result.performedAt)),
+        if (result.arena != null && result.arena!.isNotEmpty)
+          _Line(label: 'Arena', value: result.arena!),
+        _Line(label: 'Controller', value: result.controllerRef),
+        _Line(
+          label: 'Video',
+          value: result.videoUrl.isEmpty ? '—' : 'Added',
+        ),
+        if (result.note != null && result.note!.isNotEmpty)
+          _Line(label: 'Note', value: result.note!),
+        const SizedBox(height: 16),
+        Text(
+          'Reported ${formatDateAtTime(result.submittedAt)}',
+          style: const TextStyle(color: AppColors.faint, fontSize: 12),
+        ),
+      ],
+    );
+  }
+}
+
+class _Line extends StatelessWidget {
+  const _Line({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 92,
+            child: Text(
+              label,
+              style: const TextStyle(color: AppColors.muted, fontSize: 13),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(color: AppColors.fg, fontSize: 14),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

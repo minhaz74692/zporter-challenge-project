@@ -69,6 +69,7 @@ function build() {
     ),
     listByChallenge: vi.fn(async (cid: string) => parts.filter((p) => p.challengeId === cid)),
     addInvites: vi.fn(async (_cid: string, invites: { id: string }[]) => invites),
+    setResultVerification: vi.fn(async () => undefined),
   };
   const templates = { getById: vi.fn(async (): Promise<ChallengeTemplate> => TEMPLATE) };
   const participation = {
@@ -85,6 +86,8 @@ function build() {
   const teams = { memberUserIds: vi.fn(async () => ['player1', 'player2', 'player3']) };
   const users = {
     summaryById: vi.fn(async (id: string) => makeUserSummary({ id, displayName: `User ${id}` })),
+    summaryByHandle: vi.fn(async () => null),
+    getById: vi.fn(async (id: string) => ({ id, handle: `#user${id}` })),
   };
 
   const service = new ChallengesService(
@@ -250,6 +253,41 @@ describe('ChallengesService', () => {
       ctx.notifications.notify.mockClear();
       await ctx.service.submitResult('c-mine', { userId: 'coach1', role: 'coach' }, { value: 10 } as never);
       expect(ctx.notifications.notify).not.toHaveBeenCalled();
+    });
+
+    it('submitResult asks the named controller to verify', async () => {
+      ctx.challenges.push(makeChallenge({ id: 'c-ctrl', createdBy: 'coach1', deadline: FUTURE }));
+      ctx.users.summaryByHandle.mockResolvedValueOnce(
+        makeUserSummary({ id: 'ref-user', displayName: 'Ref' }),
+      );
+      await ctx.service.submitResult(
+        'c-ctrl',
+        { userId: 'player1', role: 'player' },
+        { value: 10, controllerRef: '#RefUser' } as never,
+      );
+      expect(ctx.notifications.notify).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: 'ref-user', type: 'result_verify_request' }),
+      );
+    });
+
+    it('verifyResult marks the result + notifies the submitter, only for the named controller', async () => {
+      ctx.challenges.push(makeChallenge({ id: 'c-v', deadline: FUTURE }));
+      ctx.participants.findOne.mockResolvedValue({
+        userId: 'player1',
+        displayName: 'Priya',
+        submittedResult: { value: 10, controllerRef: '#ctrl' },
+      });
+      ctx.users.getById.mockResolvedValueOnce({ id: 'coach1', handle: '#wrong' });
+      await expect(
+        ctx.service.verifyResult('c-v', 'player1', { userId: 'coach1', role: 'coach' }, true),
+      ).rejects.toThrow();
+
+      ctx.users.getById.mockResolvedValueOnce({ id: 'coach1', handle: '#CTRL' }); // case-insensitive
+      await ctx.service.verifyResult('c-v', 'player1', { userId: 'coach1', role: 'coach' }, true);
+      expect(ctx.participants.setResultVerification).toHaveBeenCalledWith('c-v', 'player1', true);
+      expect(ctx.notifications.notify).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: 'player1', type: 'result_verified' }),
+      );
     });
   });
 

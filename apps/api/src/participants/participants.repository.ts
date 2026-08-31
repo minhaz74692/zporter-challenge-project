@@ -54,6 +54,18 @@ export class ParticipantsRepository {
     return snap.exists ? participantFromDoc(snap) : null;
   }
 
+  /** Stamp the controller's verdict onto an already-submitted result. */
+  async setResultVerification(
+    challengeId: string,
+    userId: string,
+    verified: boolean,
+  ): Promise<void> {
+    await this.col(challengeId).doc(userId).update({
+      'submittedResult.verified': verified,
+      'submittedResult.verifiedAt': new Date().toISOString(),
+    });
+  }
+
   async listByChallenge(challengeId: string): Promise<Participant[]> {
     const snap = await this.col(challengeId).get();
     return snap.docs.map(participantFromDoc);

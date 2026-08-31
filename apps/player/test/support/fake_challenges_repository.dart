@@ -88,4 +88,16 @@ class FakeChallengesRepository implements ChallengesRepository {
           joinedAt: DateTime.utc(2026),
         );
   }
+
+  /// Recorded (challengeId, subjectUserId, approved) verify calls.
+  final List<(String, String, bool)> verified = [];
+
+  @override
+  Future<void> verifyResult({
+    required String challengeId,
+    required String subjectUserId,
+    required bool approved,
+  }) async {
+    verified.add((challengeId, subjectUserId, approved));
+  }
 }

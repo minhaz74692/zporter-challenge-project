@@ -40,12 +40,17 @@ class PushApi {
 /// Every entry point is defensive — if Firebase isn't configured on the
 /// platform, push is simply disabled and the app runs normally.
 class PushService {
-  PushService({required PushApi api, required GoRouter router})
-    : _api = api,
-      _router = router;
+  PushService({
+    required PushApi api,
+    required GoRouter router,
+    required void Function() onInboxChanged,
+  }) : _api = api,
+       _router = router,
+       _onInboxChanged = onInboxChanged;
 
   final PushApi _api;
   final GoRouter _router;
+  final void Function() _onInboxChanged;
   final _local = FlutterLocalNotificationsPlugin();
 
   static const _channel = AndroidNotificationChannel(
@@ -78,7 +83,13 @@ class PushService {
           android: AndroidInitializationSettings('@mipmap/ic_launcher'),
           iOS: DarwinInitializationSettings(),
         ),
-        onDidReceiveNotificationResponse: (r) => _openChallenge(r.payload),
+        onDidReceiveNotificationResponse: (r) {
+          final parts = (r.payload ?? '').split('|');
+          _routeFor(
+            parts.isNotEmpty ? parts[0] : null,
+            parts.length > 1 ? parts[1] : null,
+          );
+        },
       );
       await _local
           .resolvePlatformSpecificImplementation<
@@ -86,13 +97,20 @@ class PushService {
           >()
           ?.createNotificationChannel(_channel);
 
-      FirebaseMessaging.onMessage.listen(_showForeground);
-      FirebaseMessaging.onMessageOpenedApp.listen(
-        (m) => _openChallenge(m.data['challengeId'] as String?),
-      );
+      FirebaseMessaging.onMessage.listen((m) {
+        _showForeground(m);
+        _onInboxChanged();
+      });
+      FirebaseMessaging.onMessageOpenedApp.listen((m) {
+        _onInboxChanged();
+        _routeFor(m.data['type'] as String?, m.data['challengeId'] as String?);
+      });
       final opened = await messaging.getInitialMessage();
       if (opened != null) {
-        _openChallenge(opened.data['challengeId'] as String?);
+        _routeFor(
+          opened.data['type'] as String?,
+          opened.data['challengeId'] as String?,
+        );
       }
 
       messaging.onTokenRefresh.listen(_register);
@@ -149,12 +167,17 @@ class PushService {
         ),
         iOS: const DarwinNotificationDetails(),
       ),
-      payload: message.data['challengeId'] as String?,
+      payload:
+          '${message.data['type'] ?? ''}|${message.data['challengeId'] ?? ''}',
     );
   }
 
-  void _openChallenge(String? challengeId) {
-    if (challengeId != null && challengeId.isNotEmpty) {
+  /// A verify request opens the inbox (the sheet is there); anything with a
+  /// challenge deep-links to it.
+  void _routeFor(String? type, String? challengeId) {
+    if (type == 'result_verify_request') {
+      _router.push(AppRoutes.notifications);
+    } else if (challengeId != null && challengeId.isNotEmpty) {
       _router.push(AppRoutes.challengeDetail(challengeId));
     }
   }

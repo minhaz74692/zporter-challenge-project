@@ -2,6 +2,7 @@ import 'package:challenge/features/auth/domain/user.dart';
 import 'package:challenge/features/challenges/domain/challenge.dart';
 import 'package:challenge/features/challenges/domain/challenge_detail.dart';
 import 'package:challenge/features/challenges/domain/challenge_enums.dart';
+import 'package:challenge/features/challenges/domain/leaderboard_entry.dart';
 import 'package:challenge/features/challenges/domain/participant.dart';
 
 User buildUser({
@@ -71,6 +72,69 @@ Challenge buildChallenge({
   String status = 'active',
 }) =>
     Challenge.fromJson(challengeJson(id: id, title: title, status: status));
+
+List<Participant> buildParticipants() => [
+  Participant(
+    userId: 'u1',
+    displayName: 'Neo Jönsson',
+    handle: '#NeoJon070119',
+    club: 'Hammarby IF',
+    position: 'RW',
+    inviteState: InviteState.accepted,
+    resultState: ResultState.pending,
+    joinedAt: DateTime.utc(2026),
+  ),
+  Participant(
+    userId: 'u2',
+    displayName: 'Mark Hammil',
+    handle: '#MarHam345678',
+    club: 'Wework AB',
+    position: 'Agent',
+    inviteState: InviteState.invited,
+    resultState: ResultState.pending,
+    joinedAt: DateTime.utc(2026),
+  ),
+  Participant(
+    userId: 'u3',
+    displayName: 'John Lundstram',
+    handle: '#JohLun432567',
+    club: 'Hammarby IF',
+    position: 'Coach',
+    inviteState: InviteState.declined,
+    resultState: ResultState.pending,
+    joinedAt: DateTime.utc(2026),
+  ),
+];
+
+List<LeaderboardEntry> buildLeaderboard() => [
+  LeaderboardEntry(
+    userId: 'u_me',
+    displayName: 'Mohamed Salah',
+    handle: '#MohSal123456',
+    club: 'Maj FC',
+    value: 1903,
+    rank: 1,
+    updatedAt: DateTime.utc(2023, 12, 5),
+  ),
+  LeaderboardEntry(
+    userId: 'u2',
+    displayName: 'Raheem Sterling',
+    handle: '#RaySte654321',
+    club: 'Maj FC',
+    value: 1781,
+    rank: 2,
+    updatedAt: DateTime.utc(2023, 12, 4),
+  ),
+  LeaderboardEntry(
+    userId: 'u3',
+    displayName: 'Leo Messi',
+    handle: '#LeoMes321456',
+    club: 'Maj FC',
+    value: 1650,
+    rank: 3,
+    updatedAt: DateTime.utc(2023, 12, 3),
+  ),
+];
 
 ChallengeDetail buildChallengeDetail({
   String id = 'c_1',

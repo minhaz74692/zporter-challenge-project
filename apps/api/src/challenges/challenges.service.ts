@@ -170,16 +170,79 @@ export class ChallengesService {
   ): Promise<Participant> {
     const challenge = this.withComputedStatus(await this.requireChallenge(challengeId));
     const participant = await this.results.submit(challenge, user.userId, dto);
+
     if (challenge.createdBy !== user.userId) {
       await this.notifications.notify({
         userId: challenge.createdBy,
         type: 'result_submitted',
         challengeId: challenge.id,
+        actorId: user.userId,
         title: `${participant.displayName} submitted a result`,
         body: challenge.title,
       });
     }
+
+    // Ask the named controller to verify (Zporter "Tests"-style flow).
+    const controllerRef = dto.controllerRef?.trim();
+    const controller = controllerRef
+      ? await this.users.summaryByHandle(controllerRef)
+      : null;
+    if (controller && controller.id !== user.userId) {
+      await this.notifications.notify({
+        userId: controller.id,
+        type: 'result_verify_request',
+        challengeId: challenge.id,
+        actorId: user.userId,
+        title: `${participant.displayName} asked you to verify a result`,
+        body: challenge.title,
+      });
+    }
+
     return participant;
+  }
+
+  /**
+   * The controller named on a result approves or rejects it. Only the user
+   * whose `#Handle` matches the result's `controllerRef` may call this.
+   */
+  async verifyResult(
+    challengeId: string,
+    subjectUserId: string,
+    caller: AuthenticatedUser,
+    approved: boolean,
+  ): Promise<Participant> {
+    const challenge = await this.requireChallenge(challengeId);
+    const participant = await this.participants.findOne(challengeId, subjectUserId);
+    if (!participant?.submittedResult) {
+      throw new NotFoundException('No result to verify');
+    }
+
+    const callerHandle = (await this.users.getById(caller.userId)).handle;
+    if (
+      participant.submittedResult.controllerRef.trim().toLowerCase() !==
+      callerHandle.trim().toLowerCase()
+    ) {
+      throw new ForbiddenException('You are not the controller for this result');
+    }
+
+    await this.participants.setResultVerification(
+      challengeId,
+      subjectUserId,
+      approved,
+    );
+
+    await this.notifications.notify({
+      userId: subjectUserId,
+      type: 'result_verified',
+      challengeId: challenge.id,
+      actorId: caller.userId,
+      title: approved
+        ? 'Your result was verified'
+        : 'Your result was not approved',
+      body: challenge.title,
+    });
+
+    return (await this.participants.findOne(challengeId, subjectUserId))!;
   }
 
   async listByCategory(

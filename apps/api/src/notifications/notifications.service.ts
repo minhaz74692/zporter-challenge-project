@@ -57,6 +57,7 @@ export class NotificationsService {
       data: {
         type: notification.type,
         ...(notification.challengeId ? { challengeId: notification.challengeId } : {}),
+        ...(notification.actorId ? { actorId: notification.actorId } : {}),
       },
     });
   }

@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/auth/application/auth_notifier.dart';
+import '../../features/notifications/application/notifications_provider.dart';
 import '../network/network_providers.dart';
 import '../router/app_router.dart';
 import 'push_service.dart';
@@ -13,6 +14,7 @@ final pushServiceProvider = Provider<PushService>(
   (ref) => PushService(
     api: ref.watch(pushApiProvider),
     router: ref.watch(appRouterProvider),
+    onInboxChanged: () => ref.invalidate(notificationsProvider),
   ),
 );
 

@@ -5,7 +5,7 @@ export type NewNotification = Pick<
   AppNotification,
   'userId' | 'type' | 'title' | 'body'
 > &
-  Partial<Pick<AppNotification, 'challengeId'>>;
+  Partial<Pick<AppNotification, 'challengeId' | 'actorId'>>;
 
 /** `deviceTokens/{userId}_{platform}` — one active token per user per platform. */
 export interface DeviceTokenRecord {

@@ -26,13 +26,14 @@ export class NotificationsRepository {
       userId: data.userId,
       type: data.type,
       challengeId: data.challengeId,
+      actorId: data.actorId,
       title: data.title,
       body: data.body,
       read: false,
       createdAt: new Date().toISOString(),
     };
     const { id: _id, ...doc } = record;
-    await ref.set(doc);
+    await ref.set(doc); // Firestore is configured with ignoreUndefinedProperties
     return record;
   }
 
@@ -61,6 +62,7 @@ export class NotificationsRepository {
       userId: data.userId,
       type: data.type,
       challengeId: data.challengeId,
+      actorId: data.actorId,
       title: data.title,
       body: data.body,
       read: data.read ?? false,

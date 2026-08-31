@@ -34,6 +34,11 @@ export class UsersRepository {
     return snap.empty ? null : this.fromDoc(snap.docs[0]);
   }
 
+  async findByHandle(handle: string): Promise<UserRecord | null> {
+    const snap = await this.col.where('handle', '==', handle).limit(1).get();
+    return snap.empty ? null : this.fromDoc(snap.docs[0]);
+  }
+
   async setAvatarUrl(id: string, avatarUrl: string): Promise<void> {
     await this.col.doc(id).set({ avatarUrl }, { merge: true });
   }

@@ -1,8 +1,10 @@
 /// Route paths, referenced by name everywhere instead of string literals.
 abstract final class AppRoutes {
+  static const splash = '/splash';
   static const login = '/login';
   static const signup = '/signup';
   static const home = '/';
+  static const notifications = '/notifications';
 
   /// Challenge detail. [challengeDetailPattern] is the go_router path template;
   /// [challengeDetail] builds a concrete location.

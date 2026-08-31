@@ -12,10 +12,13 @@ export interface SubmittedResult {
   performedAt: IsoDateTime;
   /** Venue / arena free text, e.g. "SATS – Häggvik, Sollentuna". */
   arena?: string;
-  /** Handle of the witness who verified the result — required to report. */
+  /** Handle of the controller (witness) the submitter asked to verify. */
   controllerRef: string;
   note?: string;
   submittedAt: IsoDateTime;
+  /** Set by the controller via the verify endpoint; undefined = not reviewed. */
+  verified?: boolean;
+  verifiedAt?: IsoDateTime;
 }
 
 /** A user's membership + progress in one challenge (`challenges/{id}/participants`). */

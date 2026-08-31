@@ -39,15 +39,16 @@ void main() {
     return repo;
   }
 
-  testWidgets('shows the title, the three tabs and the instructions body', (
+  testWidgets('shows the title, all four tabs and the instructions body', (
     tester,
   ) async {
     await pumpScreen(tester);
 
     expect(find.text('Keepie-Uppies Century'), findsWidgets); // app-bar title
     expect(find.text('Instructions'), findsOneWidget);
-    expect(find.text('Add result'), findsOneWidget);
+    expect(find.text('Add Result'), findsOneWidget);
     expect(find.text('Participants'), findsOneWidget);
+    expect(find.text('Leaderboard'), findsOneWidget);
     expect(find.text('Description'), findsOneWidget);
   });
 
@@ -86,7 +87,7 @@ void main() {
     expect(find.text('DECLINE'), findsNothing);
     expect(find.text('ACCEPT'), findsNothing);
 
-    await tester.tap(find.text('Add result'));
+    await tester.tap(find.text('Add Result'));
     await tester.pumpAndSettle();
     expect(find.text('Video documentation'), findsOneWidget);
   });
@@ -98,7 +99,7 @@ void main() {
 
     expect(find.text('DECLINE'), findsNothing);
     expect(find.text('ACCEPT'), findsNothing);
-    expect(find.text('Add result'), findsNothing);
+    expect(find.text('Add Result'), findsNothing);
     expect(find.text('Instructions'), findsOneWidget);
     expect(find.text('Participants'), findsOneWidget);
   });

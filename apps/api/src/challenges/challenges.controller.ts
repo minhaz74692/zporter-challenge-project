@@ -28,6 +28,7 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator.js';
 import { Roles } from '../auth/decorators/roles.decorator.js';
 import type { AuthenticatedUser } from '../auth/types.js';
 import { SubmitResultDto } from '../results/dto/submit-result.dto.js';
+import { VerifyResultDto } from '../results/dto/verify-result.dto.js';
 import { ChallengesService } from './challenges.service.js';
 import { CreateChallengeDto } from './dto/create-challenge.dto.js';
 import { UpdateChallengeDto } from './dto/update-challenge.dto.js';
@@ -131,6 +132,18 @@ export class ChallengesController {
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<Participant> {
     return this.challenges.submitResult(id, user, dto);
+  }
+
+  /** The named controller approves / rejects a submitted result. */
+  @Post(':id/results/:userId/verify')
+  @HttpCode(200)
+  verifyResult(
+    @Param('id') id: string,
+    @Param('userId') userId: string,
+    @Body() dto: VerifyResultDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<Participant> {
+    return this.challenges.verifyResult(id, userId, user, dto.approved);
   }
 
   /** Upload a result video (MP4/MOV/WebM, ≤50 MB); returns `{ videoUrl }`. */

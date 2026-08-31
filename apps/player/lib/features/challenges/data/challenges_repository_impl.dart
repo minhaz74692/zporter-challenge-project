@@ -86,6 +86,18 @@ class ChallengesRepositoryImpl implements ChallengesRepository {
     });
   }
 
+  @override
+  Future<void> verifyResult({
+    required String challengeId,
+    required String subjectUserId,
+    required bool approved,
+  }) => guardApiCall(() async {
+    await _dio.post<void>(
+      '/challenges/$challengeId/results/$subjectUserId/verify',
+      data: {'approved': approved},
+    );
+  });
+
   static List<T> _mapList<T>(
     List<dynamic>? rows,
     T Function(Map<String, dynamic>) fromJson,

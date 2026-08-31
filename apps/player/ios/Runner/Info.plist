@@ -60,10 +60,13 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
-	<!-- Wake the app to handle a data / background push (FCM). -->
+	<!-- Wake the app to handle a data / background push (FCM). Disabled together
+	     with the aps-environment entitlement for free "Personal Team" device
+	     builds; re-add when signing with a paid team.
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>
 	</array>
+	-->
 </dict>
 </plist>

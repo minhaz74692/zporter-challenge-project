@@ -98,7 +98,9 @@ class AuthInterceptor extends Interceptor {
       final tokens = AuthTokens.fromJson(res.data!);
       await _storage.save(tokens);
       return tokens.accessToken;
-    } on DioException {
+    } catch (_) {
+      // Network failure or a malformed response — treat as "refresh failed"
+      // rather than letting it escape the interceptor.
       return null;
     }
   }

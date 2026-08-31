@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/gradient_panel.dart';
 import '../../domain/challenge.dart';
 import 'challenge_cover_header.dart';
 import 'challenge_meta.dart';
@@ -24,45 +25,39 @@ class ChallengeInstructionsView extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           ChallengeCoverHeader(challenge: c, showMeta: false),
-          Container(
-            // Overlap the image bottom so its hard edge sits behind the
-            // rounded corners.
-            transform: Matrix4.translationValues(0, -24, 0),
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [AppColors.cardTop, AppColors.cardBottom],
-              ),
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-            ),
-            padding: const EdgeInsets.fromLTRB(16, 24, 16, 20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ChallengeStatsRow(c),
-                const SizedBox(height: 20),
-                ChallengeDatesRow(c),
-                const SizedBox(height: 20),
-                ChallengePillRows(c),
-                const SizedBox(height: 26),
-                const Text(
-                  'Description',
-                  style: TextStyle(
-                    color: AppColors.muted,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
+          // Overlap the image bottom so its hard edge sits behind the rounded
+          // corners.
+          Transform.translate(
+            offset: const Offset(0, -24),
+            child: GradientPanel(
+              padding: const EdgeInsets.fromLTRB(16, 24, 16, 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ChallengeStatsRow(c),
+                  const SizedBox(height: 20),
+                  ChallengeDatesRow(c),
+                  const SizedBox(height: 20),
+                  ChallengePillRows(c),
+                  const SizedBox(height: 26),
+                  const Text(
+                    'Description',
+                    style: TextStyle(
+                      color: AppColors.muted,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 12),
-                RichDescription(c.description),
-                const SizedBox(height: 24),
-                if (c.creator != null) ...[
-                  CreatorRow(c.creator!),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
+                  RichDescription(c.description),
+                  const SizedBox(height: 24),
+                  if (c.creator != null) ...[
+                    CreatorRow(c.creator!),
+                    const SizedBox(height: 16),
+                  ],
+                  ChallengeRatingRow(c),
                 ],
-                ChallengeRatingRow(c),
-              ],
+              ),
             ),
           ),
         ],

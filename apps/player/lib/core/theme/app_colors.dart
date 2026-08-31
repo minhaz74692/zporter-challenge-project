@@ -45,5 +45,8 @@ abstract final class AppColors {
   static const medalSilver = Color(0xFFC7CCD6);
   static const medalBronze = Color(0xFFCD7F42);
 
+  /// The lavender row index on the participants list.
+  static const indexLavender = Color(0xFFB9A7F0);
+
   static const onPrimary = Color(0xFFFFFFFF);
 }
