@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
+import { useRef, type InputHTMLAttributes, type ReactNode, type Ref, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
 import { ChevronDown, CircleX } from 'lucide-react';
 import { cn } from '@/components/ui/cn';
 
@@ -71,8 +71,14 @@ export function TextInput({ className, ...props }: InputHTMLAttributes<HTMLInput
   return <input className={cn(bare, className)} {...props} />;
 }
 
-export function TextArea({ className, ...props }: TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  return <textarea className={cn(bare, 'block min-h-24 resize-y', className)} {...props} />;
+export function TextArea({
+  className,
+  ref,
+  ...props
+}: TextareaHTMLAttributes<HTMLTextAreaElement> & { ref?: Ref<HTMLTextAreaElement> }) {
+  return (
+    <textarea ref={ref} className={cn(bare, 'block min-h-24 resize-y', className)} {...props} />
+  );
 }
 
 export function SelectInput({

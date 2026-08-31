@@ -14,6 +14,7 @@ import { Pill } from '@/components/ui/pill';
 import { deleteChallenge } from '../actions';
 import { CoverUpload } from '@/components/challenges/cover-upload';
 import { InvitePanel } from '@/components/challenges/invite-panel';
+import { RichDescription } from '@/components/challenges/rich-description';
 import { LeaderboardBoard } from '@/components/challenges/leaderboard-board';
 
 const STATUS_TONE = { draft: 'neutral', active: 'success', ended: 'danger' } as const;
@@ -157,9 +158,7 @@ export function ChallengeDetailView({
 
       {tab === 'Details' && (
         <div className="space-y-4">
-          <p className="whitespace-pre-wrap text-[13px] leading-relaxed text-fg/90">
-            {challenge.description}
-          </p>
+          <RichDescription text={challenge.description} />
           {(challenge.collections.length > 0 || challenge.equipmentTags.length > 0) && (
             <div className="flex flex-wrap gap-1.5">
               {challenge.collections.map((c) => (

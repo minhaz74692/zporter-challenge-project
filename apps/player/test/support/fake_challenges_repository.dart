@@ -21,6 +21,11 @@ class FakeChallengesRepository implements ChallengesRepository {
   final List<String> accepted = [];
   final List<String> declined = [];
 
+  /// When set, `accept()` / `decline()` throw it instead of recording.
+  Object? respondError;
+
+  List<Participant> participantRows = const [];
+
   @override
   Future<List<Challenge>> list(ChallengeCategory category) async {
     if (listGate != null) await listGate!.future;
@@ -32,13 +37,19 @@ class FakeChallengesRepository implements ChallengesRepository {
   Future<ChallengeDetail> getById(String id) async => detail!;
 
   @override
-  Future<void> accept(String id) async => accepted.add(id);
+  Future<void> accept(String id) async {
+    if (respondError != null) throw respondError!;
+    accepted.add(id);
+  }
 
   @override
-  Future<void> decline(String id) async => declined.add(id);
+  Future<void> decline(String id) async {
+    if (respondError != null) throw respondError!;
+    declined.add(id);
+  }
 
   @override
-  Future<List<Participant>> participants(String id) async => const [];
+  Future<List<Participant>> participants(String id) async => participantRows;
 
   @override
   Future<List<LeaderboardEntry>> leaderboard(String id) async => const [];

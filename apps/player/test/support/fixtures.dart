@@ -1,5 +1,8 @@
 import 'package:challenge/features/auth/domain/user.dart';
 import 'package:challenge/features/challenges/domain/challenge.dart';
+import 'package:challenge/features/challenges/domain/challenge_detail.dart';
+import 'package:challenge/features/challenges/domain/challenge_enums.dart';
+import 'package:challenge/features/challenges/domain/participant.dart';
 
 User buildUser({
   String id = 'u_player1',
@@ -68,6 +71,20 @@ Challenge buildChallenge({
   String status = 'active',
 }) =>
     Challenge.fromJson(challengeJson(id: id, title: title, status: status));
+
+ChallengeDetail buildChallengeDetail({
+  String id = 'c_1',
+  InviteState? inviteState = InviteState.invited,
+  bool ended = false,
+}) => ChallengeDetail(
+  challenge: buildChallenge(id: id, status: ended ? 'ended' : 'active'),
+  viewerParticipant: inviteState == null
+      ? null
+      : ParticipantSummary(
+          inviteState: inviteState,
+          resultState: ResultState.pending,
+        ),
+);
 
 /// The JSON body `/auth/login` returns.
 Map<String, dynamic> authResponseJson({String access = 'access-1'}) => {

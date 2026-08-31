@@ -4,19 +4,24 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/util/formatters.dart';
 import '../../domain/challenge.dart';
 
-/// The hero section of a challenge card: cover photo, dark scrim, the date /
-/// time badge and optional completion check (top-left), the overflow menu
-/// (top-right), an optional video play button (centre), and the
-/// headline + ingress + carousel dots (bottom).
+/// The cover photo shared by the challenge card and the detail screen.
+///
+/// On the **card** ([showMeta] true) it also carries the dark scrim, the
+/// date/time badge + optional completion check, the overflow menu and the
+/// headline + ingress. On the **detail screen** ([showMeta] false) the title
+/// lives in the app bar, so only the play button and carousel dots overlay the
+/// image.
 class ChallengeCoverHeader extends StatelessWidget {
   const ChallengeCoverHeader({
     required this.challenge,
     this.showCheck = false,
+    this.showMeta = true,
     super.key,
   });
 
   final Challenge challenge;
   final bool showCheck;
+  final bool showMeta;
 
   int get _mediaCount =>
       (challenge.mediaImageUrl != null ? 1 : 0) +
@@ -30,85 +35,97 @@ class ChallengeCoverHeader extends StatelessWidget {
         fit: StackFit.expand,
         children: [
           _CoverImage(url: challenge.mediaImageUrl),
-          const DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.bottomCenter,
-                end: Alignment.topCenter,
-                colors: [Colors.black87, Colors.transparent],
-                stops: [0.0, 0.7],
+          if (showMeta)
+            const DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                  colors: [Colors.black87, Colors.transparent],
+                  stops: [0.0, 0.7],
+                ),
               ),
             ),
-          ),
-          Positioned(
-            left: 12,
-            top: 12,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (showCheck) const _CompletionCheck(),
-                if (showCheck) const SizedBox(height: 10),
-                Text(
-                  formatDayMonth(challenge.startAt),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                Text(
-                  formatTime(challenge.startAt),
-                  style: const TextStyle(
-                    color: AppColors.success,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const Positioned(
-            right: 6,
-            top: 8,
-            child: Icon(Icons.more_vert, color: Colors.white, size: 22),
-          ),
-          if (challenge.mediaVideoUrl != null) const Center(child: _PlayButton()),
-          Positioned(
-            left: 16,
-            right: 16,
-            bottom: 12,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  challenge.title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    height: 1.15,
-                  ),
-                ),
-                if (challenge.ingress != null &&
-                    challenge.ingress!.isNotEmpty) ...[
-                  const SizedBox(height: 2),
+          if (showMeta)
+            Positioned(
+              left: 12,
+              top: 12,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (showCheck) const _CompletionCheck(),
+                  if (showCheck) const SizedBox(height: 10),
                   Text(
-                    challenge.ingress!,
+                    formatDayMonth(challenge.startAt),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Text(
+                    formatTime(challenge.startAt),
+                    style: const TextStyle(
+                      color: AppColors.success,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          if (showMeta)
+            const Positioned(
+              right: 6,
+              top: 8,
+              child: Icon(Icons.more_vert, color: Colors.white, size: 22),
+            ),
+          if (challenge.mediaVideoUrl != null) const Center(child: _PlayButton()),
+          if (showMeta)
+            Positioned(
+              left: 16,
+              right: 16,
+              bottom: 12,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    challenge.title,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: Colors.white70, fontSize: 13),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      height: 1.15,
+                    ),
                   ),
+                  if (challenge.ingress != null &&
+                      challenge.ingress!.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      challenge.ingress!,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style:
+                          const TextStyle(color: Colors.white70, fontSize: 13),
+                    ),
+                  ],
+                  if (_mediaCount >= 2) ...[
+                    const SizedBox(height: 10),
+                    Center(child: _CarouselDots(count: _mediaCount)),
+                  ],
                 ],
-                if (_mediaCount >= 2) ...[
-                  const SizedBox(height: 10),
-                  Center(child: _CarouselDots(count: _mediaCount)),
-                ],
-              ],
+              ),
             ),
-          ),
+          if (!showMeta && _mediaCount >= 2)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 12,
+              child: Center(child: _CarouselDots(count: _mediaCount)),
+            ),
         ],
       ),
     );

@@ -18,12 +18,12 @@ import {
   TIME_OPTIONS,
   VISIBILITIES,
 } from '@/components/challenges/challenge-options';
-import { FilledField, SelectInput, TextArea, TextInput } from '@/components/form/filled-field';
+import { FilledField, SelectInput, TextInput } from '@/components/form/filled-field';
 import { Segmented } from '@/components/form/segmented';
 import { MultiPill } from '@/components/form/multi-pill';
 import { TagPicker } from '@/components/form/tag-picker';
 import { PointsSlider } from '@/components/form/points-slider';
-import { RichTextToolbar } from '@/components/form/rich-text-toolbar';
+import { RichTextArea } from '@/components/form/rich-text-area';
 import { InvitesPanel } from '@/components/challenges/invites-panel';
 import { LeaderboardBoard } from '@/components/challenges/leaderboard-board';
 import type { ChallengePrefill } from './prefill';
@@ -85,6 +85,14 @@ export function CreateChallengeForm({
   const shareOptions = canPublishToAll
     ? VISIBILITIES
     : VISIBILITIES.filter((v) => v.value !== 'all');
+
+  // Editing a challenge whose current audience the user can't set (a coach on
+  // an admin's global challenge): show it read-only and submit no `visibility`
+  // field, so the PATCH leaves it untouched instead of silently downgrading it.
+  const lockedVisibility =
+    p?.visibility && !shareOptions.some((o) => o.value === p.visibility)
+      ? VISIBILITIES.find((v) => v.value === p.visibility)
+      : undefined;
 
   return (
     <div className="mx-auto max-w-3xl pb-24">
@@ -153,8 +161,7 @@ export function CreateChallengeForm({
           <div>
             <span className={sectionLabel}>Description</span>
             <div className="relative overflow-hidden rounded-[var(--radius-control)] bg-field/80 ring-1 ring-white/[0.04] focus-within:ring-primary/50">
-              <RichTextToolbar />
-              <TextArea
+              <RichTextArea
                 name="description"
                 rows={5}
                 defaultValue={p?.description ?? ''}
@@ -346,21 +353,35 @@ export function CreateChallengeForm({
 
               <div>
                 <span className={sectionLabel}>Share with</span>
-                <Segmented
-                  name="visibility"
-                  options={shareOptions}
-                  defaultValue={
-                    shareOptions.some((o) => o.value === p?.visibility)
-                      ? p!.visibility!
-                      : 'private'
-                  }
-                  columns={4}
-                />
-                <p className="mt-1 pl-1 text-[11px] text-faint">
-                  {canPublishToAll
-                    ? '“All” publishes to every player. Private keeps it to the people you invite.'
-                    : 'Private keeps it to the people you invite. Publishing to everyone (“All”) is admin-only.'}
-                </p>
+                {lockedVisibility ? (
+                  <>
+                    <div className="rounded-[var(--radius-control)] bg-field/80 px-3.5 py-2.5 text-[13px] text-fg ring-1 ring-white/[0.04]">
+                      {lockedVisibility.label}
+                    </div>
+                    <p className="mt-1 pl-1 text-[11px] text-faint">
+                      This challenge is published to everyone (admin-only) — editing
+                      here keeps that unchanged.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <Segmented
+                      name="visibility"
+                      options={shareOptions}
+                      defaultValue={
+                        shareOptions.some((o) => o.value === p?.visibility)
+                          ? p!.visibility!
+                          : 'private'
+                      }
+                      columns={4}
+                    />
+                    <p className="mt-1 pl-1 text-[11px] text-faint">
+                      {canPublishToAll
+                        ? '“All” publishes to every player. Private keeps it to the people you invite.'
+                        : 'Private keeps it to the people you invite. Publishing to everyone (“All”) is admin-only.'}
+                    </p>
+                  </>
+                )}
               </div>
             </div>
           </div>

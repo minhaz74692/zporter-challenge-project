@@ -5,11 +5,12 @@
 // (the server is the source of truth, but a prototype shouldn't crash on a new
 // enum member it hasn't shipped support for yet).
 
-/// The five player list tabs. `apiValue` is the `?category=` query value.
+/// The five player list tabs, in Figma order. `apiValue` is the `?category=`
+/// query value.
 enum ChallengeCategory {
-  fresh('new', 'New'),
-  active('active', 'Active'),
   done('done', 'Done'),
+  active('active', 'Active'),
+  fresh('new', 'New'),
   declined('declined', 'Declined'),
   ended('ended', 'Ended');
 

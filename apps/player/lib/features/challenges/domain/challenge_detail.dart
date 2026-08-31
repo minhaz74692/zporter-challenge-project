@@ -30,9 +30,13 @@ class ChallengeDetail extends Equatable {
         const [],
   );
 
-  ChallengeDetail copyWith({ParticipantSummary? viewerParticipant}) => ChallengeDetail(
+  ChallengeDetail copyWith({
+    ParticipantSummary? viewerParticipant,
+    bool clearViewerParticipant = false,
+  }) => ChallengeDetail(
     challenge: challenge,
-    viewerParticipant: viewerParticipant ?? this.viewerParticipant,
+    viewerParticipant:
+        clearViewerParticipant ? null : (viewerParticipant ?? this.viewerParticipant),
     leaderboardPreview: leaderboardPreview,
   );
 

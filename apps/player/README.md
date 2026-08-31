@@ -33,17 +33,22 @@ The value is read from `--dart-define`. The convenient way is a config file:
 ## Run
 
 ```bash
-# against the deployed API — works on emulator, simulator, and physical devices
+make cloud        # against the deployed Cloud Run API (config/cloud.json)
+make local        # against a local API           (config/local.json)
+
+make cloud ARGS="-d chrome"   # pass extra flutter args (device, etc.)
+```
+
+`make local` reads the git-ignored `config/local.json` — edit its `API_BASE_URL`
+for your target: `http://localhost:3000` (iOS simulator),
+`http://10.0.2.2:3000` (Android emulator), `http://<your-LAN-IP>:3000` (device).
+
+Equivalent raw commands, if you prefer:
+
+```bash
 flutter run --dart-define-from-file=config/cloud.json
-
-# against a local API on the Android emulator — default URL
-flutter run
-
-# against a local API from a device / iOS simulator
 flutter run --dart-define-from-file=config/local.json
-
-# or inline
-flutter run --dart-define=API_BASE_URL=http://192.168.0.104:3000
+flutter run --dart-define=API_BASE_URL=http://192.168.0.104:3000   # inline
 ```
 
 Physical device notes:

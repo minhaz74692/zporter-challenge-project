@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../domain/challenge_enums.dart';
 import 'widgets/app_drawer.dart';
+import 'widgets/challenge_filter_bar.dart';
 import 'widgets/challenge_list_view.dart';
 
-/// The challenge list: a top bar and the five category tabs
-/// (New / Active / Done / Declined / Ended), each an independent
-/// [ChallengeListView].
+/// The challenge list: a top bar, the five category tabs (Done / Active / New /
+/// Declined / Ended), a filter/sort bar, then each tab's [ChallengeListView].
 class ChallengesScreen extends StatelessWidget {
   const ChallengesScreen({super.key});
 
@@ -43,8 +43,15 @@ class ChallengesScreen extends StatelessWidget {
             tabs: [for (final c in _tabs) Tab(text: c.label)],
           ),
         ),
-        body: TabBarView(
-          children: [for (final c in _tabs) ChallengeListView(category: c)],
+        body: Column(
+          children: [
+            const ChallengeFilterBar(),
+            Expanded(
+              child: TabBarView(
+                children: [for (final c in _tabs) ChallengeListView(category: c)],
+              ),
+            ),
+          ],
         ),
       ),
     );
