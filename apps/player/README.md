@@ -16,25 +16,30 @@ app runs:
 
 | Running on | `API_BASE_URL` |
 | --- | --- |
-| Android emulator | `http://10.0.2.2:3000` (the default — no config needed) |
-| iOS simulator | `http://localhost:3000` |
-| Physical device (iOS/Android) | `http://<your-mac-LAN-IP>:3000` — find it with `ipconfig getifaddr en0` / `ifconfig` |
+| Deployed API (any target) | `https://zporter-api-d4awjs3cxa-uc.a.run.app` — use `config/cloud.json` |
+| Android emulator + local API | `http://10.0.2.2:3000` (the default — no config needed) |
+| iOS simulator + local API | `http://localhost:3000` |
+| Physical device + local API | `http://<your-mac-LAN-IP>:3000` — find it with `ipconfig getifaddr en0` / `ifconfig` |
 
-The value is read from `--dart-define`. The convenient way is the git-ignored
-`config/local.json` (copy `config/local.example.json`):
+The value is read from `--dart-define`. The convenient way is a config file:
+`config/cloud.json` (committed, points at Cloud Run) or the git-ignored
+`config/local.json` (copy `config/local.example.json` for a local API).
 
 ```jsonc
-// config/local.json
-{ "API_BASE_URL": "http://192.168.0.104:3000" }
+// config/cloud.json
+{ "API_BASE_URL": "https://zporter-api-d4awjs3cxa-uc.a.run.app" }
 ```
 
 ## Run
 
 ```bash
-# emulator — default URL
+# against the deployed API — works on emulator, simulator, and physical devices
+flutter run --dart-define-from-file=config/cloud.json
+
+# against a local API on the Android emulator — default URL
 flutter run
 
-# device / simulator — with the local config file
+# against a local API from a device / iOS simulator
 flutter run --dart-define-from-file=config/local.json
 
 # or inline

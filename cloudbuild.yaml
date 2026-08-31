@@ -1,0 +1,53 @@
+# Build the NestJS API image from apps/api/Dockerfile (build context = repo root),
+# push it to Artifact Registry, and roll out a new Cloud Run revision.
+#
+#   gcloud builds submit --config cloudbuild.yaml --substitutions _REGION=<region>
+#
+# Env vars / secrets are set here so the service config lives in version control.
+# Artifact Registry repo is "zporter", image "api" — created in setup step 4.
+substitutions:
+  _REGION: us-central1
+  _SERVICE: zporter-api
+
+steps:
+  - id: build
+    name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -f
+      - apps/api/Dockerfile
+      - -t
+      - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/zporter/api:${BUILD_ID}
+      - -t
+      - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/zporter/api:latest
+      - .
+
+  - id: push
+    name: gcr.io/cloud-builders/docker
+    args: [push, --all-tags, "${_REGION}-docker.pkg.dev/${PROJECT_ID}/zporter/api"]
+
+  - id: deploy
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - ${_SERVICE}
+      - --image=${_REGION}-docker.pkg.dev/${PROJECT_ID}/zporter/api:${BUILD_ID}
+      - --region=${_REGION}
+      - --platform=managed
+      - --allow-unauthenticated
+      - --port=8080
+      - --memory=512Mi
+      - --cpu=1
+      - --min-instances=0
+      - --max-instances=3
+      - --set-env-vars=NODE_ENV=production,FIREBASE_PROJECT_ID=${PROJECT_ID},FIREBASE_STORAGE_BUCKET=${PROJECT_ID}.firebasestorage.app,JWT_ACCESS_TTL=15m,JWT_REFRESH_TTL_DAYS=14
+      - --set-secrets=JWT_ACCESS_SECRET=zporter-jwt-access-secret:latest
+
+images:
+  - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/zporter/api:${BUILD_ID}
+  - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/zporter/api:latest
+
+options:
+  logging: CLOUD_LOGGING_ONLY
