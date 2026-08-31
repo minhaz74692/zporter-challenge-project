@@ -1,4 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="ic_launcher_background">#1B1B1B</color>
+    <!-- Fills the notification-badge circle behind the white Zporter mark
+         (Android draws the small icon as a white silhouette on this colour).
+         Matches the launcher-icon background. -->
+    <color name="notification_accent">#1B1B1B</color>
 </resources>

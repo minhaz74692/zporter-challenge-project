@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/push/push_providers.dart';
 import 'core/router/app_router.dart';
+import 'core/session/session_reset.dart';
 import 'core/theme/app_theme.dart';
 
 /// Root widget. Owns the [MaterialApp] and wires in the router (which carries
@@ -14,6 +15,8 @@ class ZporterChallengeApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     // Keeps the FCM token in sync with sign-in / sign-out.
     ref.watch(pushRegistrarProvider);
+    // Clears the previous user's cached data when the account changes.
+    ref.watch(sessionResetProvider);
 
     return MaterialApp.router(
       title: 'Zporter',

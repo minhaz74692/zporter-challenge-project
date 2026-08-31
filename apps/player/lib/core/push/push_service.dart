@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:ui';
 
 import 'package:dio/dio.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -53,6 +54,11 @@ class PushService {
   final void Function() _onInboxChanged;
   final _local = FlutterLocalNotificationsPlugin();
 
+  /// White status-bar silhouette; the badge circle behind it uses the
+  /// launcher-icon background so it matches the app icon.
+  static const _smallIcon = 'ic_stat_zporter';
+  static const _iconBg = Color(0xFF1B1B1B);
+
   static const _channel = AndroidNotificationChannel(
     'zporter_default',
     'General',
@@ -71,7 +77,11 @@ class PushService {
     try {
       final messaging = FirebaseMessaging.instance;
 
-      await messaging.requestPermission();
+      final settings = await messaging.requestPermission();
+      debugPrint(
+        'PushService: notification permission = '
+        '${settings.authorizationStatus}',
+      );
       await messaging.setForegroundNotificationPresentationOptions(
         alert: true,
         badge: true,
@@ -80,7 +90,7 @@ class PushService {
 
       await _local.initialize(
         const InitializationSettings(
-          android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+          android: AndroidInitializationSettings(_smallIcon),
           iOS: DarwinInitializationSettings(),
         ),
         onDidReceiveNotificationResponse: (r) {
@@ -124,6 +134,7 @@ class PushService {
     await _start();
     try {
       final token = await FirebaseMessaging.instance.getToken();
+      debugPrint('PushService: FCM token = $token'); // paste into Console → test
       if (token != null) await _register(token);
     } catch (e) {
       debugPrint('PushService.syncToken failed ($e)');
@@ -145,8 +156,9 @@ class PushService {
     try {
       await _api.registerToken(token);
       _registeredToken = token;
+      debugPrint('PushService: token registered with the API');
     } on ApiException catch (e) {
-      debugPrint('PushService: token register failed (${e.message})');
+      debugPrint('PushService: token register FAILED (${e.statusCode} ${e.message})');
     }
   }
 
@@ -164,6 +176,8 @@ class PushService {
           channelDescription: _channel.description,
           importance: Importance.high,
           priority: Priority.high,
+          icon: _smallIcon,
+          color: _iconBg,
         ),
         iOS: const DarwinNotificationDetails(),
       ),

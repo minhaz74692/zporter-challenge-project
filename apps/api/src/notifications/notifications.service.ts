@@ -59,6 +59,16 @@ export class NotificationsService {
         ...(notification.challengeId ? { challengeId: notification.challengeId } : {}),
         ...(notification.actorId ? { actorId: notification.actorId } : {}),
       },
+      // High priority so Android delivers immediately instead of batching it
+      // into the next Doze maintenance window (the "arrives minutes later" bug).
+      android: {
+        priority: 'high',
+        notification: { channelId: 'zporter_default' },
+      },
+      apns: {
+        headers: { 'apns-priority': '10' },
+        payload: { aps: { sound: 'default' } },
+      },
     });
   }
 }

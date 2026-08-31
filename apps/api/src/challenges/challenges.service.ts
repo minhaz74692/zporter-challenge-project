@@ -16,6 +16,7 @@ import type {
   SubmitResultRequest,
   UserSummary,
 } from '@zporter/shared';
+import { notificationCopy } from '../notifications/notification-copy.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { ParticipantsRepository } from '../participants/participants.repository.js';
 import { StorageService, type UploadedImage } from '../storage/storage.service.js';
@@ -177,8 +178,7 @@ export class ChallengesService {
         type: 'result_submitted',
         challengeId: challenge.id,
         actorId: user.userId,
-        title: `${participant.displayName} submitted a result`,
-        body: challenge.title,
+        ...notificationCopy('result_submitted', challenge.title, participant.displayName),
       });
     }
 
@@ -193,8 +193,11 @@ export class ChallengesService {
         type: 'result_verify_request',
         challengeId: challenge.id,
         actorId: user.userId,
-        title: `${participant.displayName} asked you to verify a result`,
-        body: challenge.title,
+        ...notificationCopy(
+          'result_verify_request',
+          challenge.title,
+          participant.displayName,
+        ),
       });
     }
 
@@ -236,10 +239,8 @@ export class ChallengesService {
       type: 'result_verified',
       challengeId: challenge.id,
       actorId: caller.userId,
-      title: approved
-        ? 'Your result was verified'
-        : 'Your result was not approved',
-      body: challenge.title,
+      ...notificationCopy('result_verified', challenge.title),
+      ...(approved ? {} : { title: 'Your result was not approved' }),
     });
 
     return (await this.participants.findOne(challengeId, subjectUserId))!;
@@ -517,8 +518,7 @@ export class ChallengesService {
           userId: user.id,
           type: 'challenge_invite',
           challengeId: challenge.id,
-          title: 'You have a new challenge',
-          body: challenge.title,
+          ...notificationCopy('challenge_invite', challenge.title),
         }),
       ),
     );
