@@ -26,6 +26,12 @@ String formatTime(DateTime dt) {
   return '${_pad2(d.hour)}:${_pad2(d.minute)}';
 }
 
+/// `01 / 12 / 2023` — the Add-result date field.
+String formatDate(DateTime dt) {
+  final d = dt.toLocal();
+  return '${_pad2(d.day)} / ${_pad2(d.month)} / ${d.year}';
+}
+
 /// `8-12Y`, `8+`, `≤12`, or `All` — the age-range stat.
 String formatAgeRange(int? from, int? to) {
   if (from == null && to == null) return 'All';

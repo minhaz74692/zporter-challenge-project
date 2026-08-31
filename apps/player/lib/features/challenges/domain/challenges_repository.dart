@@ -3,6 +3,7 @@ import 'challenge_detail.dart';
 import 'challenge_enums.dart';
 import 'leaderboard_entry.dart';
 import 'participant.dart';
+import 'submit_result_request.dart';
 
 /// The challenge data boundary. `data/` implements this against the REST API;
 /// tests supply a fake.
@@ -22,4 +23,10 @@ abstract interface class ChallengesRepository {
   Future<List<Participant>> participants(String id);
 
   Future<List<LeaderboardEntry>> leaderboard(String id);
+
+  /// Upload a result video (picked from the device); returns its stored URL.
+  Future<String> uploadResultVideo(String id, String filePath);
+
+  /// Submit a result. Returns the caller's updated participant row.
+  Future<Participant> submitResult(String id, SubmitResultRequest request);
 }

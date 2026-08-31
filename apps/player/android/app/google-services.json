@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "500812370812",
+    "project_id": "zporter-challenge-app",
+    "storage_bucket": "zporter-challenge-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:500812370812:android:6c12bce697e1c6803c0af9",
+        "android_client_info": {
+          "package_name": "com.zporter.challenge"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCcwQ9q1jMykhqb13yxN0Pc9Fry3F3q0YQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

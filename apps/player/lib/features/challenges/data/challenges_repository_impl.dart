@@ -7,6 +7,7 @@ import '../domain/challenge_enums.dart';
 import '../domain/challenges_repository.dart';
 import '../domain/leaderboard_entry.dart';
 import '../domain/participant.dart';
+import '../domain/submit_result_request.dart';
 
 /// REST implementation of [ChallengesRepository]. Every method routes through
 /// [guardApiCall] so the only thing it throws is [ApiException].
@@ -57,6 +58,31 @@ class ChallengesRepositoryImpl implements ChallengesRepository {
     return guardApiCall(() async {
       final res = await _dio.get<List<dynamic>>('/challenges/$id/leaderboard');
       return _mapList(res.data, LeaderboardEntry.fromJson);
+    });
+  }
+
+  @override
+  Future<String> uploadResultVideo(String id, String filePath) {
+    return guardApiCall(() async {
+      final form = FormData.fromMap({
+        'file': await MultipartFile.fromFile(filePath),
+      });
+      final res = await _dio.post<Map<String, dynamic>>(
+        '/challenges/$id/results/video',
+        data: form,
+      );
+      return res.data!['videoUrl'] as String;
+    });
+  }
+
+  @override
+  Future<Participant> submitResult(String id, SubmitResultRequest request) {
+    return guardApiCall(() async {
+      final res = await _dio.post<Map<String, dynamic>>(
+        '/challenges/$id/results',
+        data: request.toJson(),
+      );
+      return Participant.fromJson(res.data!);
     });
   }
 

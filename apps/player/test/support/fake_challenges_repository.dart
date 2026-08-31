@@ -6,6 +6,7 @@ import 'package:challenge/features/challenges/domain/challenge_enums.dart';
 import 'package:challenge/features/challenges/domain/challenges_repository.dart';
 import 'package:challenge/features/challenges/domain/leaderboard_entry.dart';
 import 'package:challenge/features/challenges/domain/participant.dart';
+import 'package:challenge/features/challenges/domain/submit_result_request.dart';
 
 /// Scriptable [ChallengesRepository] for `application/` + widget tests.
 class FakeChallengesRepository implements ChallengesRepository {
@@ -25,6 +26,18 @@ class FakeChallengesRepository implements ChallengesRepository {
   Object? respondError;
 
   List<Participant> participantRows = const [];
+  List<LeaderboardEntry> leaderboardRows = const [];
+
+  /// Recorded (challengeId, filePath); `uploadResultVideo` returns [videoUrl].
+  final List<(String, String)> videoUploads = [];
+  String videoUrl = 'https://videos.test/result.mp4';
+  Object? videoUploadError;
+
+  /// Recorded submitted requests; `submitResult` returns [submittedParticipant]
+  /// or throws [submitError].
+  final List<SubmitResultRequest> submitted = [];
+  Object? submitError;
+  Participant? submittedParticipant;
 
   @override
   Future<List<Challenge>> list(ChallengeCategory category) async {
@@ -52,5 +65,27 @@ class FakeChallengesRepository implements ChallengesRepository {
   Future<List<Participant>> participants(String id) async => participantRows;
 
   @override
-  Future<List<LeaderboardEntry>> leaderboard(String id) async => const [];
+  Future<List<LeaderboardEntry>> leaderboard(String id) async => leaderboardRows;
+
+  @override
+  Future<String> uploadResultVideo(String id, String filePath) async {
+    if (videoUploadError != null) throw videoUploadError!;
+    videoUploads.add((id, filePath));
+    return videoUrl;
+  }
+
+  @override
+  Future<Participant> submitResult(String id, SubmitResultRequest request) async {
+    if (submitError != null) throw submitError!;
+    submitted.add(request);
+    return submittedParticipant ??
+        Participant(
+          userId: 'u1',
+          displayName: 'Priya',
+          handle: '#Pri',
+          inviteState: InviteState.accepted,
+          resultState: ResultState.submitted,
+          joinedAt: DateTime.utc(2026),
+        );
+  }
 }

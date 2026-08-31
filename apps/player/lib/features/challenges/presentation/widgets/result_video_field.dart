@@ -1,0 +1,210 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
+
+import '../../../../core/network/api_exception.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../data/challenges_providers.dart';
+
+/// The Figma "Video documentation" box: tap to pick a video from the gallery,
+/// which uploads to the API and reports the stored URL via [onChanged] (null
+/// while empty / uploading / failed).
+class ResultVideoField extends ConsumerStatefulWidget {
+  const ResultVideoField({
+    required this.challengeId,
+    required this.onChanged,
+    super.key,
+  });
+
+  final String challengeId;
+  final ValueChanged<String?> onChanged;
+
+  @override
+  ConsumerState<ResultVideoField> createState() => _ResultVideoFieldState();
+}
+
+enum _Phase { empty, uploading, uploaded, error }
+
+class _ResultVideoFieldState extends ConsumerState<ResultVideoField> {
+  _Phase _phase = _Phase.empty;
+  String? _fileName;
+  String? _error;
+
+  Future<void> _start() async {
+    if (_phase == _Phase.uploading) return;
+    final source = await _chooseSource();
+    if (source != null) await _pick(source);
+  }
+
+  Future<ImageSource?> _chooseSource() {
+    return showModalBottomSheet<ImageSource>(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.videocam_rounded, color: AppColors.fg),
+              title: const Text(
+                'Record a video',
+                style: TextStyle(color: AppColors.fg),
+              ),
+              onTap: () => Navigator.pop(context, ImageSource.camera),
+            ),
+            ListTile(
+              leading:
+                  const Icon(Icons.photo_library_rounded, color: AppColors.fg),
+              title: const Text(
+                'Choose from gallery',
+                style: TextStyle(color: AppColors.fg),
+              ),
+              onTap: () => Navigator.pop(context, ImageSource.gallery),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pick(ImageSource source) async {
+    final XFile? picked;
+    try {
+      picked = await ImagePicker().pickVideo(source: source);
+    } catch (_) {
+      setState(() {
+        _phase = _Phase.error;
+        _error = source == ImageSource.camera
+            ? 'Could not open the camera'
+            : 'Could not open the gallery';
+      });
+      return;
+    }
+    if (picked == null) return;
+
+    setState(() {
+      _phase = _Phase.uploading;
+      _fileName = picked!.name;
+      _error = null;
+    });
+    widget.onChanged(null);
+
+    try {
+      final url = await ref
+          .read(challengesRepositoryProvider)
+          .uploadResultVideo(widget.challengeId, picked.path);
+      if (!mounted) return;
+      setState(() => _phase = _Phase.uploaded);
+      widget.onChanged(url);
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _phase = _Phase.error;
+        _error = e.message;
+      });
+      widget.onChanged(null);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        const Text(
+          'Video documentation',
+          style: TextStyle(color: AppColors.muted, fontSize: 14),
+        ),
+        const SizedBox(height: 12),
+        InkWell(
+          onTap: _start,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            height: 190,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: AppColors.surfaceRaised,
+              borderRadius: BorderRadius.circular(12),
+              border: _phase == _Phase.error
+                  ? Border.all(color: AppColors.danger)
+                  : null,
+            ),
+            child: Center(child: _content()),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _content() {
+    switch (_phase) {
+      case _Phase.empty:
+        return const Icon(
+          Icons.video_call_rounded,
+          size: 52,
+          color: AppColors.faint,
+        );
+      case _Phase.uploading:
+        return const Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 26,
+              height: 26,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            SizedBox(height: 10),
+            Text('Uploading…', style: TextStyle(color: AppColors.muted)),
+          ],
+        );
+      case _Phase.uploaded:
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.check_circle_rounded,
+              size: 44,
+              color: AppColors.success,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _fileName ?? 'Video added',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: AppColors.fg, fontSize: 13),
+            ),
+            const SizedBox(height: 2),
+            const Text(
+              'Tap to replace',
+              style: TextStyle(color: AppColors.muted, fontSize: 12),
+            ),
+          ],
+        );
+      case _Phase.error:
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.error_outline_rounded,
+              size: 40,
+              color: AppColors.danger,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _error ?? 'Upload failed',
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: AppColors.muted, fontSize: 12),
+            ),
+            const SizedBox(height: 2),
+            const Text(
+              'Tap to try again',
+              style: TextStyle(color: AppColors.muted, fontSize: 12),
+            ),
+          ],
+        );
+    }
+  }
+}

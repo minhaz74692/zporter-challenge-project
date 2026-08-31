@@ -243,6 +243,25 @@ export class ChallengesService {
     return this.withCreator({ ...challenge, mediaImageUrl });
   }
 
+  /**
+   * Store a result video and return its URL. The caller then submits it as
+   * `videoUrl` in `POST /challenges/:id/results`. Any authenticated user who
+   * can see the challenge may upload; `submitResult` enforces participation.
+   */
+  async uploadResultVideo(
+    challengeId: string,
+    user: AuthenticatedUser,
+    video: UploadedImage,
+  ): Promise<{ videoUrl: string }> {
+    await this.requireChallenge(challengeId);
+    const videoUrl = await this.storage.uploadVideo({
+      buffer: video.buffer,
+      mimeType: video.mimetype,
+      path: `challenges/${challengeId}/results/${user.userId}/video`,
+    });
+    return { videoUrl };
+  }
+
   async listParticipants(challengeId: string): Promise<Participant[]> {
     await this.requireChallenge(challengeId);
     return this.participants.listByChallenge(challengeId);

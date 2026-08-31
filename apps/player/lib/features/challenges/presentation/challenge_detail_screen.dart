@@ -3,17 +3,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/async_view.dart';
 import '../application/challenge_detail_provider.dart';
 import '../domain/challenge_detail.dart';
 import '../domain/challenge_enums.dart';
-import '../domain/participant.dart';
 import 'widgets/challenge_instructions_view.dart';
 import 'widgets/challenge_participants_view.dart';
+import 'widgets/challenge_report_view.dart';
 
-/// Challenge detail — Instructions / Report / Participants tabs with a
-/// persistent Decline / Accept action bar.
+/// Challenge detail — Instructions / Add result / Participants tabs, with a
+/// Decline / Accept action bar while the invite is still open.
 class ChallengeDetailScreen extends ConsumerWidget {
   const ChallengeDetailScreen({required this.challengeId, super.key});
 
@@ -23,9 +22,23 @@ class ChallengeDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final value = ref.watch(challengeDetailProvider(challengeId));
     final detail = value.valueOrNull;
+    final state = detail?.viewerParticipant?.inviteState;
+
+    // Declining ends your involvement — drop the "Add result" tab for it.
+    final showReportTab = state != InviteState.declined;
+    final showActionBar = detail != null &&
+        (state == null || state == InviteState.invited);
+
+    final tabLabels = [
+      'Instructions',
+      if (showReportTab) 'Add result',
+      'Participants',
+    ];
 
     return DefaultTabController(
-      length: 3,
+      // Re-key so the controller rebuilds cleanly if the tab count changes.
+      key: ValueKey(tabLabels.length),
+      length: tabLabels.length,
       child: Scaffold(
         backgroundColor: AppColors.bg,
         appBar: AppBar(
@@ -40,62 +53,58 @@ class ChallengeDetailScreen extends ConsumerWidget {
             Icon(Icons.ios_share_rounded, color: AppColors.fg, size: 22),
             SizedBox(width: 16),
           ],
-          bottom: const TabBar(
+          bottom: TabBar(
             isScrollable: true,
             tabAlignment: TabAlignment.start,
             indicatorColor: AppColors.accent,
             indicatorSize: TabBarIndicatorSize.label,
             labelColor: AppColors.accent,
             unselectedLabelColor: AppColors.muted,
-            labelStyle: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-            tabs: [
-              Tab(text: 'Instructions'),
-              Tab(text: 'Report'),
-              Tab(text: 'Participants'),
-            ],
+            labelStyle:
+                const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+            tabs: [for (final label in tabLabels) Tab(text: label)],
           ),
         ),
         body: AsyncView<ChallengeDetail>(
           value: value,
-          onRetry: () =>
-              ref.invalidate(challengeDetailProvider(challengeId)),
-          data: (detail) => TabBarView(
-            children: [
-              ChallengeInstructionsView(detail.challenge),
-              const _ReportTabPlaceholder(),
-              ChallengeParticipantsView(challengeId),
-            ],
-          ),
+          onRetry: () => ref.invalidate(challengeDetailProvider(challengeId)),
+          data: (detail) {
+            final vp = detail.viewerParticipant;
+            final canReport = (vp?.hasAccepted ?? false) &&
+                !(vp?.hasSubmitted ?? false) &&
+                !detail.challenge.hasEnded;
+            return TabBarView(
+              children: [
+                ChallengeInstructionsView(detail.challenge),
+                if (showReportTab)
+                  ChallengeReportView(
+                    challenge: detail.challenge,
+                    canReport: canReport,
+                  ),
+                ChallengeParticipantsView(challengeId),
+              ],
+            );
+          },
         ),
-        // No action bar once the invite has been declined — the challenge
-        // lives in the Declined tab and there's nothing left to do here.
-        bottomNavigationBar: detail == null ||
-                detail.viewerParticipant?.inviteState == InviteState.declined
-            ? null
-            : _ActionBar(
+        bottomNavigationBar: showActionBar
+            ? _ActionBar(
                 challengeId: challengeId,
-                participant: detail.viewerParticipant,
                 ended: detail.challenge.hasEnded,
-              ),
+              )
+            : null,
       ),
     );
   }
 }
 
 class _ActionBar extends ConsumerWidget {
-  const _ActionBar({
-    required this.challengeId,
-    required this.participant,
-    required this.ended,
-  });
+  const _ActionBar({required this.challengeId, required this.ended});
 
   final String challengeId;
-  final ParticipantSummary? participant;
   final bool ended;
 
   Future<void> _run(
     BuildContext context,
-    WidgetRef ref,
     Future<void> Function() action,
     String successMessage,
   ) async {
@@ -115,59 +124,41 @@ class _ActionBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final notifier = ref.read(challengeDetailProvider(challengeId).notifier);
-    final state = participant?.inviteState;
 
-    final Widget content;
-    if (ended) {
-      content = const _FullWidth(
-        child: OutlinedButton(onPressed: null, child: Text('Challenge ended')),
-      );
-    } else if (state == null || state == InviteState.invited) {
-      content = Row(
-        children: [
-          Expanded(
-            flex: 2,
+    final Widget content = ended
+        ? const SizedBox(
+            width: double.infinity,
             child: OutlinedButton(
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.danger,
-                side: const BorderSide(color: AppColors.danger),
-                minimumSize: const Size.fromHeight(48),
-              ),
-              onPressed: () => _run(
-                context,
-                ref,
-                notifier.decline,
-                'Challenge declined',
-              ),
-              child: const Text('DECLINE'),
+              onPressed: null,
+              child: Text('Challenge ended'),
             ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            flex: 3,
-            child: ElevatedButton(
-              onPressed: () => _run(
-                context,
-                ref,
-                notifier.accept,
-                'Challenge accepted',
+          )
+        : Row(
+            children: [
+              Expanded(
+                flex: 2,
+                child: OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.danger,
+                    side: const BorderSide(color: AppColors.danger),
+                    minimumSize: const Size.fromHeight(48),
+                  ),
+                  onPressed: () =>
+                      _run(context, notifier.decline, 'Challenge declined'),
+                  child: const Text('DECLINE'),
+                ),
               ),
-              child: const Text('ACCEPT'),
-            ),
-          ),
-        ],
-      );
-    } else if (state == InviteState.accepted) {
-      content = _FullWidth(
-        child: ElevatedButton(
-          onPressed: () => DefaultTabController.of(context).animateTo(1),
-          child: const Text('Report result'),
-        ),
-      );
-    } else {
-      // Declined is handled one level up (no bar); nothing to show here.
-      return const SizedBox.shrink();
-    }
+              const SizedBox(width: 12),
+              Expanded(
+                flex: 3,
+                child: ElevatedButton(
+                  onPressed: () =>
+                      _run(context, notifier.accept, 'Challenge accepted'),
+                  child: const Text('ACCEPT'),
+                ),
+              ),
+            ],
+          );
 
     return SafeArea(
       child: Container(
@@ -180,32 +171,4 @@ class _ActionBar extends ConsumerWidget {
       ),
     );
   }
-}
-
-class _FullWidth extends StatelessWidget {
-  const _FullWidth({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) => SizedBox(
-    width: double.infinity,
-    child: child,
-  );
-}
-
-class _ReportTabPlaceholder extends StatelessWidget {
-  const _ReportTabPlaceholder();
-
-  @override
-  Widget build(BuildContext context) => const Center(
-    child: Padding(
-      padding: EdgeInsets.all(AppSpacing.xxl),
-      child: Text(
-        'Report a result — coming in Phase 5.',
-        textAlign: TextAlign.center,
-        style: TextStyle(color: AppColors.muted),
-      ),
-    ),
-  );
 }

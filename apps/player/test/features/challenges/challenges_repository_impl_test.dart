@@ -2,6 +2,7 @@ import 'package:challenge/core/network/api_exception.dart';
 import 'package:challenge/core/network/dio_client.dart';
 import 'package:challenge/features/challenges/data/challenges_repository_impl.dart';
 import 'package:challenge/features/challenges/domain/challenge_enums.dart';
+import 'package:challenge/features/challenges/domain/submit_result_request.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -105,5 +106,34 @@ void main() {
             .having((e) => e.message, 'message', 'This challenge has ended'),
       ),
     );
+  });
+
+  test('submitResult() POSTs the body and parses the participant row', () async {
+    RequestOptions? seen;
+    final repo = build((options) async {
+      seen = options;
+      return jsonResponse({
+        'userId': 'u1',
+        'displayName': 'Priya Nair',
+        'handle': '#PriNai',
+        'inviteState': 'accepted',
+        'resultState': 'completed',
+        'joinedAt': '2026-08-30T10:00:00.000Z',
+      }, 200);
+    });
+
+    final p = await repo.submitResult(
+      'c_9',
+      SubmitResultRequest(
+        value: 25,
+        videoUrl: 'https://v.test/x.mp4',
+        controllerRef: '#Ref',
+        performedAt: DateTime.utc(2026, 8, 30, 9),
+      ),
+    );
+
+    expect(seen?.path, endsWith('/challenges/c_9/results'));
+    expect((seen?.data as Map)['value'], 25);
+    expect(p.resultState, ResultState.completed);
   });
 }

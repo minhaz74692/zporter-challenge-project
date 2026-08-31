@@ -8,8 +8,11 @@ import { randomUUID } from 'node:crypto';
 import { FirebaseService } from '../firebase/firebase.service.js';
 import {
   ALLOWED_IMAGE_MIME,
+  ALLOWED_VIDEO_MIME,
   MAX_IMAGE_BYTES,
+  MAX_VIDEO_BYTES,
   type AllowedImageMime,
+  type AllowedVideoMime,
 } from './storage.constants.js';
 
 export interface UploadImageInput {
@@ -43,9 +46,19 @@ export class StorageService {
 
   /** Store an image at `path` (overwriting) and return a stable tokenised URL. */
   async uploadImage({ buffer, mimeType, path }: UploadImageInput): Promise<string> {
-    const bucketName = this.requireBucket();
     this.assertValidImage(buffer, mimeType);
+    return this.store(buffer, mimeType, path);
+  }
 
+  /** Store a result video at `path` (overwriting) and return a tokenised URL. */
+  async uploadVideo({ buffer, mimeType, path }: UploadImageInput): Promise<string> {
+    this.assertValidVideo(buffer, mimeType);
+    return this.store(buffer, mimeType, path);
+  }
+
+  /** Save the bytes to the bucket with a download token, return the URL. */
+  private async store(buffer: Buffer, mimeType: string, path: string): Promise<string> {
+    const bucketName = this.requireBucket();
     const token = randomUUID();
     const file = this.firebase.storage.bucket(bucketName).file(path);
     await file.save(buffer, {
@@ -74,6 +87,16 @@ export class StorageService {
     if (buffer.length === 0) throw new BadRequestException('The uploaded file is empty');
     if (buffer.length > MAX_IMAGE_BYTES) {
       throw new BadRequestException('Image must be 5 MB or smaller');
+    }
+  }
+
+  private assertValidVideo(buffer: Buffer, mimeType: string): void {
+    if (!ALLOWED_VIDEO_MIME.includes(mimeType as AllowedVideoMime)) {
+      throw new BadRequestException('Only MP4, MOV or WebM videos are allowed');
+    }
+    if (buffer.length === 0) throw new BadRequestException('The uploaded file is empty');
+    if (buffer.length > MAX_VIDEO_BYTES) {
+      throw new BadRequestException('Video must be 50 MB or smaller');
     }
   }
 

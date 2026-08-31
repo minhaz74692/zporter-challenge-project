@@ -45,6 +45,12 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Zporter needs access to your photos to attach a result video to a challenge.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Zporter needs the camera to record a result video for a challenge.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Zporter needs the microphone to record sound with your result video.</string>
 	<!-- Dev: the API runs over plain HTTP on the local network (emulator
 	     loopback / a LAN IP). NSAllowsLocalNetworking permits HTTP to
 	     private-range hosts only; public HTTP stays blocked. Production uses
@@ -54,5 +60,10 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<!-- Wake the app to handle a data / background push (FCM). -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 </dict>
 </plist>

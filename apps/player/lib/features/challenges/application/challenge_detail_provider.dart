@@ -5,6 +5,7 @@ import '../data/challenges_providers.dart';
 import '../domain/challenge_detail.dart';
 import '../domain/challenge_enums.dart';
 import '../domain/challenges_repository.dart';
+import '../domain/leaderboard_entry.dart';
 import '../domain/participant.dart';
 import 'challenge_list_provider.dart';
 
@@ -72,4 +73,10 @@ class ChallengeDetailNotifier
 final challengeParticipantsProvider =
     FutureProvider.family<List<Participant>, String>((ref, id) {
   return ref.watch(challengesRepositoryProvider).participants(id);
+});
+
+/// Full leaderboard for the leaderboard view.
+final challengeLeaderboardProvider =
+    FutureProvider.family<List<LeaderboardEntry>, String>((ref, id) {
+  return ref.watch(challengesRepositoryProvider).leaderboard(id);
 });

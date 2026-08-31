@@ -1,7 +1,7 @@
 import { BadRequestException, ServiceUnavailableException } from '@nestjs/common';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FirebaseService } from '../firebase/firebase.service.js';
-import { MAX_IMAGE_BYTES } from './storage.constants.js';
+import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES } from './storage.constants.js';
 import { StorageService } from './storage.service.js';
 
 const BUCKET = 'demo-bucket.firebasestorage.app';
@@ -73,6 +73,42 @@ describe('StorageService.uploadImage', () => {
     await expect(
       service.uploadImage({ buffer: png(), mimeType: 'image/png', path: 'x' }),
     ).rejects.toBeInstanceOf(ServiceUnavailableException);
+  });
+});
+
+describe('StorageService.uploadVideo', () => {
+  let ctx: ReturnType<typeof build>;
+  beforeEach(() => {
+    ctx = withBucket();
+  });
+
+  const mp4 = () => Buffer.from('fake-mp4-bytes');
+
+  it('stores an MP4 and returns a tokenised URL', async () => {
+    const url = await ctx.service.uploadVideo({
+      buffer: mp4(),
+      mimeType: 'video/mp4',
+      path: 'challenges/c1/results/u1/video',
+    });
+    expect(ctx.file).toHaveBeenCalledWith('challenges/c1/results/u1/video');
+    expect(ctx.save.mock.calls[0][1].contentType).toBe('video/mp4');
+    expect(url).toContain('?alt=media&token=');
+  });
+
+  it('rejects a non-video mime type', async () => {
+    await expect(
+      ctx.service.uploadVideo({ buffer: mp4(), mimeType: 'image/png', path: 'x' }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('rejects an oversize video', async () => {
+    await expect(
+      ctx.service.uploadVideo({
+        buffer: Buffer.alloc(MAX_VIDEO_BYTES + 1),
+        mimeType: 'video/mp4',
+        path: 'x',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 });
 

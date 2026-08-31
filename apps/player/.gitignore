@@ -46,3 +46,7 @@ app.*.map.json
 
 # Local dev config (machine-specific API URL)
 /config/local.json
+
+# Firebase per-project config (add locally; see apps/player/FCM_SETUP.md)
+apps/player/android/app/google-services.json
+apps/player/ios/Runner/GoogleService-Info.plist

@@ -46,7 +46,7 @@ void main() {
 
     expect(find.text('Keepie-Uppies Century'), findsWidgets); // app-bar title
     expect(find.text('Instructions'), findsOneWidget);
-    expect(find.text('Report'), findsOneWidget);
+    expect(find.text('Add result'), findsOneWidget);
     expect(find.text('Participants'), findsOneWidget);
     expect(find.text('Description'), findsOneWidget);
   });
@@ -78,17 +78,28 @@ void main() {
     expect(find.text('ACCEPT'), findsNothing);
   });
 
-  testWidgets('an accepted viewer gets the Report action', (tester) async {
+  testWidgets('an accepted viewer has no action bar and can open Add result', (
+    tester,
+  ) async {
     await pumpScreen(tester, inviteState: InviteState.accepted);
 
-    expect(find.text('Report result'), findsOneWidget);
+    expect(find.text('DECLINE'), findsNothing);
+    expect(find.text('ACCEPT'), findsNothing);
+
+    await tester.tap(find.text('Add result'));
+    await tester.pumpAndSettle();
+    expect(find.text('Video documentation'), findsOneWidget);
   });
 
-  testWidgets('a declined challenge shows no action bar', (tester) async {
+  testWidgets('a declined challenge: no action bar, no Add result tab', (
+    tester,
+  ) async {
     await pumpScreen(tester, inviteState: InviteState.declined);
 
     expect(find.text('DECLINE'), findsNothing);
     expect(find.text('ACCEPT'), findsNothing);
-    expect(find.text('Report result'), findsNothing);
+    expect(find.text('Add result'), findsNothing);
+    expect(find.text('Instructions'), findsOneWidget);
+    expect(find.text('Participants'), findsOneWidget);
   });
 }

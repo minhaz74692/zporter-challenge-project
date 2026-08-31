@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/push/push_providers.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 
@@ -11,6 +12,9 @@ class ZporterChallengeApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Keeps the FCM token in sync with sign-in / sign-out.
+    ref.watch(pushRegistrarProvider);
+
     return MaterialApp.router(
       title: 'Zporter',
       debugShowCheckedModeBanner: false,

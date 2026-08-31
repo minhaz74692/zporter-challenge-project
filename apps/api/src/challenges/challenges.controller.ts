@@ -13,7 +13,11 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiTags } from '@nestjs/swagger';
-import { parseImageUpload, type MulterFile } from '../storage/image-upload.pipe.js';
+import {
+  parseImageUpload,
+  parseVideoUpload,
+  type MulterFile,
+} from '../storage/image-upload.pipe.js';
 import type {
   Challenge,
   ChallengeDetail,
@@ -127,6 +131,22 @@ export class ChallengesController {
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<Participant> {
     return this.challenges.submitResult(id, user, dto);
+  }
+
+  /** Upload a result video (MP4/MOV/WebM, ≤50 MB); returns `{ videoUrl }`. */
+  @Post(':id/results/video')
+  @HttpCode(200)
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: { type: 'object', properties: { file: { type: 'string', format: 'binary' } } },
+  })
+  uploadResultVideo(
+    @Param('id') id: string,
+    @UploadedFile(parseVideoUpload) file: MulterFile,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<{ videoUrl: string }> {
+    return this.challenges.uploadResultVideo(id, user, file);
   }
 
   @Post(':id/invite')
