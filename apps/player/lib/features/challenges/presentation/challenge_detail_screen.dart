@@ -142,22 +142,25 @@ class _ActionBar extends ConsumerWidget {
           )
         : Row(
             children: [
+              // Figma widths 138 : 182 ≈ 3 : 4, ~14px apart.
               Expanded(
-                flex: 2,
+                flex: 3,
                 child: OutlinedButton(
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.danger,
-                    side: const BorderSide(color: AppColors.danger),
-                    minimumSize: const Size.fromHeight(48),
+                    foregroundColor: AppColors.declined, // Figma #FF1D00
+                    side: const BorderSide(
+                      color: AppColors.declined,
+                      width: 2,
+                    ),
                   ),
                   onPressed: () =>
                       _run(context, notifier.decline, 'Challenge declined'),
                   child: const Text('DECLINE'),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 14),
               Expanded(
-                flex: 3,
+                flex: 4,
                 child: ElevatedButton(
                   onPressed: () =>
                       _run(context, notifier.accept, 'Challenge accepted'),

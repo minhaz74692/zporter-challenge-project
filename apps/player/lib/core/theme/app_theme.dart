@@ -74,6 +74,25 @@ abstract final class AppTheme {
           ),
         ),
       ),
+      // Secondary CTA — Figma pairs it with the primary: same 36h box, same r4
+      // corner, 2px outline, 14/700 label, matching soft drop shadow. Without
+      // this the M3 default makes it a full pill, so it never matches "Accept".
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size.fromHeight(36),
+          elevation: 2,
+          shadowColor: const Color(0x33000000), // rgba(0,0,0,0.2)
+          side: const BorderSide(width: 2),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadii.button),
+          ),
+          textStyle: const TextStyle(
+            fontWeight: FontWeight.w700,
+            fontSize: 14,
+            height: 17 / 14,
+          ),
+        ),
+      ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: AppColors.field,
