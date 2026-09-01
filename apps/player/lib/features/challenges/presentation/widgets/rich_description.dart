@@ -21,16 +21,17 @@ class RichDescription extends StatelessWidget {
     dotAll: true,
   );
 
-  static const _muted = TextStyle(
-    color: AppColors.muted,
-    fontSize: 14,
-    height: 1.5,
+  // Figma: 12 / 400 / 14 line-height, white.
+  static const _normal = TextStyle(
+    color: AppColors.fgStrong,
+    fontSize: 12,
+    height: 14 / 12,
   );
   static const _heading = TextStyle(
-    color: AppColors.fg,
-    fontSize: 14,
+    color: AppColors.fgStrong,
+    fontSize: 12,
     fontWeight: FontWeight.w700,
-    height: 1.5,
+    height: 14 / 12,
   );
 
   @override
@@ -56,7 +57,7 @@ class RichDescription extends StatelessWidget {
       return _listRow('${numbered.group(1)}.  ', numbered.group(2)!);
     }
 
-    final base = _headingLine.hasMatch(line) ? _heading : _muted;
+    final base = _headingLine.hasMatch(line) ? _heading : _normal;
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
       child: Text.rich(TextSpan(children: _spans(line, base)), style: base),
@@ -69,11 +70,11 @@ class RichDescription extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(marker, style: _muted),
+          Text(marker, style: _normal),
           Expanded(
             child: Text.rich(
-              TextSpan(children: _spans(content, _muted)),
-              style: _muted,
+              TextSpan(children: _spans(content, _normal)),
+              style: _normal,
             ),
           ),
         ],
@@ -93,7 +94,7 @@ class RichDescription extends StatelessWidget {
         spans.add(TextSpan(
           text: m.group(1),
           style: base.copyWith(
-            color: AppColors.fg,
+            color: AppColors.fgStrong,
             fontWeight: FontWeight.w700,
           ),
         ));

@@ -19,6 +19,11 @@ abstract final class AppColors {
   static const border = Color(0xFF24252D);
   static const borderSoft = Color(0xFF1E1F26);
 
+  // "Filter Challenges" sheet (Figma).
+  static const outline = Color(0xFF707070); // sheet panel border
+  static const fieldOutline = Color(0xFF4A4C51); // dropdown border + its label
+  static const discFill = Color(0xFF1E1F24); // close-button circle
+
   // Challenge card body — a top-to-bottom gradient (from the Figma card fill).
   static const cardTop = Color(0xFF13161A);
   static const cardBottom = Color(0xFF0D0F12);
@@ -30,7 +35,7 @@ abstract final class AppColors {
   static const faint = Color(0xFF5C606C);
 
   // Actions / status.
-  static const primary = Color(0xFF4E5BF2); // primary CTA — "Open", "Accept"
+  static const primary = Color(0xFF4654EA); // primary CTA — "Open", "Accept" (Figma)
   static const badge = Color(0xFF4654EA); // unread / notification dot (Figma)
 
   // Tabs (Figma "Text Tab").
@@ -40,11 +45,13 @@ abstract final class AppColors {
   static const accent = Color(0xFFFFA333); // active / selected
   static const accentHover = Color(0xFFFF9314);
   static const success = Color(0xFF25D07D); // "Done", completion, current user
+  static const completed = Color(0xFF09E099); // brighter "completed" green — card-cover check + date (Figma)
+  static const declined = Color(0xFFFF1D00); // "declined" red — card-cover check + date (Figma)
   static const danger = Color(0xFFF5484A); // "Decline", destructive
 
-  // Pills.
-  static const pillEquipment = Color(0xFF3A3C46); // grey — equipment tags
-  static const pillSkill = primary; // blue — skill / collection tags
+  // Pills — Figma challenge-card tag rows.
+  static const pillEquipment = Color(0xFF818389); // grey — equipment tags
+  static const pillSkill = badge; // blue (#4654EA) — skill / collection tags
 
   // Leaderboard medals.
   static const medalGold = Color(0xFFF5C451);

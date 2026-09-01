@@ -37,6 +37,8 @@ describe('toUserSummary', () => {
       displayName: 'Coach Carter',
       handle: '#CoaCar1',
       avatarUrl: 'https://x/a.png',
+      country: 'SE',
+      city: 'Malmö',
       club: 'Maj FC',
       position: 'FW',
     });

@@ -304,7 +304,8 @@ const CHALLENGES: ChallengeSeed[] = [
         {
           url: 'https://www.youtube.com/watch?v=b1Dp2Yl3ARw',
           type: 'youtube',
-          thumbnailUrl: 'https://img.youtube.com/vi/b1Dp2Yl3ARw/hqdefault.jpg',
+          // 16:9 still — hqdefault.jpg is 4:3 with baked-in letterbox bars.
+          thumbnailUrl: 'https://img.youtube.com/vi/b1Dp2Yl3ARw/hq720.jpg',
         },
       ],
     },

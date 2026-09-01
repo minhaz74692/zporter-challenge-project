@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
+import 'app_icon.dart';
 
 /// The thin row under the tabs / above a list: a green summary of the active
 /// sort + filters on the left, a sort (⇅) and a filter (☰) trigger on the
 /// right. Presentational — callers wire the taps and supply the summary.
+///
+/// Figma: 16px side margins, 11px top, `#09E099` 14/400 summary, white icons.
 class FilterSortBar extends StatelessWidget {
   const FilterSortBar({
     required this.summary,
@@ -20,7 +23,8 @@ class FilterSortBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 6, 12),
+      // 11px above (Figma), a tighter 6px below so the first card sits close.
+      padding: const EdgeInsets.fromLTRB(16, 11, 16, 6),
       child: Row(
         children: [
           Expanded(
@@ -29,19 +33,17 @@ class FilterSortBar extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
-                color: AppColors.success,
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
+                color: AppColors.completed,
+                fontSize: 14,
+                fontWeight: FontWeight.w400,
+                height: 17 / 14,
               ),
             ),
           ),
+          _BarIcon(asset: AppIconAsset.order, tooltip: 'Sort', onTap: onSort),
+          const SizedBox(width: 16),
           _BarIcon(
-            icon: Icons.swap_vert_rounded,
-            tooltip: 'Sort',
-            onTap: onSort,
-          ),
-          _BarIcon(
-            icon: Icons.filter_list_rounded,
+            asset: AppIconAsset.sort,
             tooltip: 'Filter',
             onTap: onFilter,
           ),
@@ -53,22 +55,27 @@ class FilterSortBar extends StatelessWidget {
 
 class _BarIcon extends StatelessWidget {
   const _BarIcon({
-    required this.icon,
+    required this.asset,
     required this.tooltip,
     required this.onTap,
   });
 
-  final IconData icon;
+  final AppIconAsset asset;
   final String tooltip;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return IconButton(
-      onPressed: onTap,
-      tooltip: tooltip,
-      visualDensity: VisualDensity.compact,
-      icon: Icon(icon, color: AppColors.fg, size: 22),
+    return Tooltip(
+      message: tooltip,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 3),
+          child: AppIcon(asset, size: 18, color: AppColors.fgStrong),
+        ),
+      ),
     );
   }
 }

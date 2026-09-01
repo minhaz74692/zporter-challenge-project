@@ -116,13 +116,34 @@ void main() {
       expect(c.galleryItems.first.url, 'https://img/cover.jpg');
     });
 
-    test('a YouTube item derives an img.youtube.com thumbnail when none is sent', () {
+    test('a YouTube item derives 16:9 img.youtube.com stills when none is sent', () {
       const item = MediaItem(
         url: 'https://www.youtube.com/watch?v=b1Dp2Yl3ARw',
         type: MediaKind.youtube,
       );
       expect(item.resolvedThumbnail,
-          'https://img.youtube.com/vi/b1Dp2Yl3ARw/hqdefault.jpg');
+          'https://img.youtube.com/vi/b1Dp2Yl3ARw/hq720.jpg');
+      expect(item.fallbackThumbnail,
+          'https://img.youtube.com/vi/b1Dp2Yl3ARw/mqdefault.jpg');
+    });
+
+    test('rewrites a 4:3 letterboxed YouTube still to the 16:9 one', () {
+      const item = MediaItem(
+        url: 'https://www.youtube.com/watch?v=b1Dp2Yl3ARw',
+        type: MediaKind.youtube,
+        thumbnailUrl: 'https://img.youtube.com/vi/b1Dp2Yl3ARw/hqdefault.jpg',
+      );
+      expect(item.resolvedThumbnail,
+          'https://img.youtube.com/vi/b1Dp2Yl3ARw/hq720.jpg');
+    });
+
+    test('keeps a non-YouTube thumbnail untouched', () {
+      const item = MediaItem(
+        url: 'https://videos.test/clip.mp4',
+        type: MediaKind.video,
+        thumbnailUrl: 'https://img.test/poster.jpg',
+      );
+      expect(item.resolvedThumbnail, 'https://img.test/poster.jpg');
     });
   });
 

@@ -12,6 +12,7 @@ import '../../domain/challenge.dart';
 import '../../domain/challenge_enums.dart';
 import 'challenge_card.dart';
 import 'challenge_card_skeleton.dart';
+import 'challenge_cover_header.dart';
 
 /// One list tab. Watches its own [challengeListProvider] family instance, so
 /// the five tabs load and refresh independently, then applies the shared
@@ -41,14 +42,19 @@ class ChallengeListView extends ConsumerWidget {
           return ListView.builder(
             physics: const AlwaysScrollableScrollPhysics(),
             // No horizontal padding — the cards (and their cover photos) are
-            // full-bleed; each card pads its own body content.
-            padding: const EdgeInsets.only(top: 8, bottom: 24),
+            // full-bleed; each card pads its own body content. No top inset
+            // either: the filter/sort bar already sets the gap to the first card.
+            padding: const EdgeInsets.only(bottom: 24),
             itemCount: shown.length,
             itemBuilder: (context, i) {
               final challenge = shown[i];
               return ChallengeCard(
                 challenge: challenge,
-                showCheck: category == ChallengeCategory.done,
+                coverStatus: switch (category) {
+                  ChallengeCategory.done => CoverStatus.completed,
+                  ChallengeCategory.declined => CoverStatus.declined,
+                  _ => CoverStatus.none,
+                },
                 onOpen: () =>
                     context.push(AppRoutes.challengeDetail(challenge.id)),
               );

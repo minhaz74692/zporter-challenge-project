@@ -55,18 +55,22 @@ abstract final class AppTheme {
           borderRadius: BorderRadius.circular(AppRadii.card),
         ),
       ),
+      // Primary CTA — Figma: 36h, #4654EA, r4, 14/700, soft drop shadow.
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primary,
           foregroundColor: AppColors.onPrimary,
           disabledBackgroundColor: AppColors.surfaceOverlay,
-          minimumSize: const Size.fromHeight(48),
+          minimumSize: const Size.fromHeight(36),
+          elevation: 2,
+          shadowColor: const Color(0x33000000), // rgba(0,0,0,0.2)
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadii.control),
+            borderRadius: BorderRadius.circular(AppRadii.button),
           ),
           textStyle: const TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 15,
+            fontWeight: FontWeight.w700,
+            fontSize: 14,
+            height: 17 / 14,
           ),
         ),
       ),

@@ -15,7 +15,8 @@
       "Bash(pnpm test *)",
       "Bash(pnpm --filter @zporter/web lint)",
       "Bash(pnpm --filter @zporter/web test)",
-      "Bash(flutter pub *)"
+      "Bash(flutter pub *)",
+      "Bash(grep -nA6 \"LSApplicationQueriesSchemes\\\\|NSAppTransport\" ios/Runner/Info.plist)"
     ]
   }
 }

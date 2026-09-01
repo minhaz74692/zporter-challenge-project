@@ -25,7 +25,11 @@ import { JwtStrategy } from './strategies/jwt.strategy.js';
         secret: config.getOrThrow<AuthConfig>('auth').accessSecret,
       }),
     }),
-    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 20 }]),
+    // Default bucket sized for the app's own session bookkeeping: /auth/me and
+    // /auth/refresh fire on every launch, user switch and cache reset, and the
+    // Android emulator funnels every client through one host IP. Credential
+    // submission (login/signup) is capped far tighter per-handler.
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
   ],
   controllers: [AuthController],
   providers: [

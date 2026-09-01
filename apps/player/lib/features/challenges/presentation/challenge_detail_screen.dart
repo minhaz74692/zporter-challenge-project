@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/async_view.dart';
 import '../../../core/widgets/section_tab_bar.dart';
 import '../application/challenge_detail_provider.dart';
+import '../domain/challenge.dart';
 import '../domain/challenge_detail.dart';
 import '../domain/challenge_enums.dart';
 import 'widgets/challenge_instructions_view.dart';
@@ -29,8 +32,8 @@ class ChallengeDetailScreen extends ConsumerWidget {
     // Declining ends your involvement — drop the report tab for it.
     final showReportTab = state != InviteState.declined;
     final hasSubmitted = detail?.viewerParticipant?.submittedResult != null;
-    final showActionBar = detail != null &&
-        (state == null || state == InviteState.invited);
+    final showActionBar =
+        detail != null && (state == null || state == InviteState.invited);
 
     final tabLabels = [
       'Instructions',
@@ -48,14 +51,23 @@ class ChallengeDetailScreen extends ConsumerWidget {
         appBar: AppBar(
           backgroundColor: AppColors.bg,
           titleSpacing: 0,
+          leading: IconButton(
+            // Figma: a thin grey back chevron.
+            icon: const Icon(
+              Icons.chevron_left_rounded,
+              color: AppColors.tabInactive,
+              size: 26,
+            ),
+            onPressed: () => context.pop(),
+          ),
           title: Text(
             detail?.challenge.title ?? 'Challenge',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
-          actions: const [
-            Icon(Icons.ios_share_rounded, color: AppColors.fg, size: 22),
-            SizedBox(width: 16),
+          actions: [
+            _ShareButton(challenge: detail?.challenge),
+            const SizedBox(width: 12),
           ],
           bottom: SectionTabBar(labels: tabLabels),
         ),
@@ -64,6 +76,10 @@ class ChallengeDetailScreen extends ConsumerWidget {
           onRetry: () => ref.invalidate(challengeDetailProvider(challengeId)),
           data: (detail) {
             return TabBarView(
+              // The Instructions tab hosts a horizontal media carousel; a
+              // swipeable TabBarView would steal that drag. Tabs switch via the
+              // always-visible tab bar instead.
+              physics: const NeverScrollableScrollPhysics(),
               children: [
                 ChallengeInstructionsView(detail.challenge),
                 if (showReportTab)
@@ -160,6 +176,50 @@ class _ActionBar extends ConsumerWidget {
         ),
         child: content,
       ),
+    );
+  }
+}
+
+/// White share icon that opens the native share sheet (iOS + Android) with the
+/// challenge headline + ingress. Disabled until the challenge has loaded.
+class _ShareButton extends StatelessWidget {
+  const _ShareButton({required this.challenge});
+
+  final Challenge? challenge;
+
+  Future<void> _share(BuildContext context) async {
+    final c = challenge;
+    if (c == null) return;
+
+    final buffer = StringBuffer(
+      '"${c.title}" — a football challenge on Zporter',
+    );
+    if (c.ingress != null && c.ingress!.trim().isNotEmpty) {
+      buffer.write('\n\n${c.ingress!.trim()}');
+    }
+
+    // Anchor the popover on iPad; ignored elsewhere.
+    final box = context.findRenderObject() as RenderBox?;
+    final origin = box != null && box.hasSize
+        ? box.localToGlobal(Offset.zero) & box.size
+        : null;
+
+    await Share.share(
+      buffer.toString(),
+      subject: c.title,
+      sharePositionOrigin: origin,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      icon: const Icon(
+        Icons.share_rounded,
+        color: AppColors.fgStrong,
+        size: 22,
+      ),
+      onPressed: challenge == null ? null : () => _share(context),
     );
   }
 }

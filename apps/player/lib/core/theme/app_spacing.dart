@@ -15,7 +15,8 @@ abstract final class AppSpacing {
 
 /// Corner radii, mirrored from the web tokens (`--radius-*`).
 abstract final class AppRadii {
-  static const control = 10.0; // buttons, inputs
+  static const button = 4.0; // primary CTA (Figma)
+  static const control = 10.0; // inputs
   static const card = 14.0; // challenge cards
   static const panel = 20.0; // sheets, large containers
   static const pill = 999.0;

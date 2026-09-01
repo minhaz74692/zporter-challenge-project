@@ -24,16 +24,20 @@ import { SignupDto } from './dto/signup.dto.js';
 import { AuthService } from './auth.service.js';
 import type { AuthenticatedUser } from './types.js';
 
-// Auth endpoints are the prime brute-force target — cap them tighter than the
-// (currently absent) global default.
+// The class inherits the module's default bucket (120/min) — enough headroom for
+// the client's automatic /auth/me + /auth/refresh traffic. The two endpoints
+// that accept credentials are the brute-force target, so they override that with
+// a much tighter per-IP cap.
+const CREDENTIAL_THROTTLE = { default: { limit: 30, ttl: 60_000 } };
+
 @ApiTags('auth')
 @Controller('auth')
 @UseGuards(ThrottlerGuard)
-@Throttle({ default: { limit: 20, ttl: 60_000 } })
 export class AuthController {
   constructor(private readonly auth: AuthService) {}
 
   @Public()
+  @Throttle(CREDENTIAL_THROTTLE)
   @Post('signup')
   @ApiCreatedResponse({ type: AuthResponseDto })
   signup(
@@ -44,6 +48,7 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle(CREDENTIAL_THROTTLE)
   @Post('login')
   @HttpCode(200)
   @ApiOkResponse({ type: AuthResponseDto })

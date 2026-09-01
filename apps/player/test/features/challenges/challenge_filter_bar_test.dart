@@ -33,13 +33,13 @@ void main() {
 
     expect(find.text('Latest, Field'), findsOneWidget);
 
-    await tester.tap(find.byIcon(Icons.filter_list_rounded));
+    await tester.tap(find.byTooltip('Filter'));
     await tester.pumpAndSettle();
     expect(find.text('Filter Challenges'), findsOneWidget);
     await tester.tap(find.byIcon(Icons.close_rounded));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byIcon(Icons.swap_vert_rounded));
+    await tester.tap(find.byTooltip('Sort'));
     await tester.pumpAndSettle();
     expect(find.text('Sort by'), findsOneWidget);
     expect(find.text('Ending soon'), findsOneWidget); // a sort option row

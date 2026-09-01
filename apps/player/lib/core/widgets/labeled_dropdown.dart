@@ -23,7 +23,7 @@ class LabeledDropdown<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     OutlineInputBorder border(Color color) => OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(4),
       borderSide: BorderSide(color: color),
     );
 
@@ -31,25 +31,25 @@ class LabeledDropdown<T> extends StatelessWidget {
       initialValue: value,
       isExpanded: true,
       dropdownColor: AppColors.surfaceRaised,
-      borderRadius: BorderRadius.circular(12),
-      icon: const Icon(
+      borderRadius: BorderRadius.circular(4),
+      icon: Icon(
         Icons.keyboard_arrow_down_rounded,
-        color: AppColors.muted,
+        color: AppColors.tabInactive.withValues(alpha: 0.5),
       ),
       style: const TextStyle(
-        color: AppColors.fg,
-        fontSize: 17,
-        fontWeight: FontWeight.w500,
+        color: AppColors.fgStrong,
+        fontSize: 16,
+        fontWeight: FontWeight.w400,
       ),
       decoration: InputDecoration(
         labelText: label,
         filled: false,
         floatingLabelBehavior: FloatingLabelBehavior.always,
-        labelStyle: const TextStyle(color: AppColors.muted, fontSize: 13),
+        labelStyle: const TextStyle(color: AppColors.fieldOutline, fontSize: 14),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-        enabledBorder: border(AppColors.pillEquipment),
-        focusedBorder: border(AppColors.primary),
-        border: border(AppColors.pillEquipment),
+        enabledBorder: border(AppColors.fieldOutline),
+        focusedBorder: border(AppColors.fieldOutline),
+        border: border(AppColors.fieldOutline),
       ),
       items: [
         for (final item in items)

@@ -20,7 +20,7 @@ export interface User {
 /** Trimmed user shape embedded in challenge / participant / leaderboard rows. */
 export type UserSummary = Pick<
   User,
-  'id' | 'displayName' | 'handle' | 'avatarUrl' | 'club' | 'position'
+  'id' | 'displayName' | 'handle' | 'avatarUrl' | 'country' | 'city' | 'club' | 'position'
 >;
 
 export interface SignupRequest {

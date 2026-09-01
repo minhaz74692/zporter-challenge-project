@@ -37,14 +37,37 @@ void main() {
     await tester.pump();
 
     expect(find.byType(PageView), findsOneWidget);
-    // One 7×7 circular dot per media item.
+    // One 11×11 circular dot per media item.
     final dots = tester.widgetList<Container>(find.byType(Container)).where((c) {
       final d = c.decoration;
       return d is BoxDecoration &&
           d.shape == BoxShape.circle &&
-          c.constraints == const BoxConstraints.tightFor(width: 7, height: 7);
+          c.constraints == const BoxConstraints.tightFor(width: 11, height: 11);
     });
     expect(dots.length, 3);
+  });
+
+  testWidgets('tapping a dot animates to that slide', (tester) async {
+    await pump(
+      tester,
+      withMedia(const [
+        MediaItem(url: 'https://img/a.jpg', type: MediaKind.image),
+        MediaItem(url: 'https://img/b.jpg', type: MediaKind.image),
+        MediaItem(url: 'https://img/c.jpg', type: MediaKind.image),
+      ]),
+      showMeta: false,
+    );
+    await tester.pump();
+
+    // Tap the last dot (GestureDetector wrapping an 11×11 circle).
+    final dot = find.byWidgetPredicate((w) {
+      return w is Container &&
+          w.constraints == const BoxConstraints.tightFor(width: 11, height: 11);
+    });
+    await tester.tap(dot.last, warnIfMissed: false);
+    await tester.pumpAndSettle();
+
+    expect(tester.widget<PageView>(find.byType(PageView)).controller!.page, 2.0);
   });
 
   testWidgets('a video / YouTube slide shows the play button', (tester) async {

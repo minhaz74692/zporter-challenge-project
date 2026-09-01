@@ -21,7 +21,13 @@ export function LoginForm({ next }: { next: string }) {
         />
       </Field>
       <Field label="Password">
-        <Input name="password" type="password" autoComplete="current-password" required />
+        <Input
+          name="password"
+          type="password"
+          autoComplete="current-password"
+          required
+          defaultValue="password123#"
+        />
       </Field>
       {state.error && <p className="text-xs text-danger">{state.error}</p>}
       <Button type="submit" className="w-full" disabled={pending}>

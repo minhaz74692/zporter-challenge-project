@@ -35,6 +35,8 @@ export function toUserSummary(record: UserRecord): UserSummary {
     displayName: record.displayName,
     handle: record.handle,
     avatarUrl: record.avatarUrl,
+    country: record.country,
+    city: record.city,
     club: record.club,
     position: record.position,
   };

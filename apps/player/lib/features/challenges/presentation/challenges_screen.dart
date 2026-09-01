@@ -42,7 +42,19 @@ class ChallengesScreen extends StatelessWidget {
         ),
         body: Column(
           children: [
-            const ChallengeFilterBar(),
+            // The "Done" tab has no filter / sort controls.
+            Builder(
+              builder: (context) {
+                final controller = DefaultTabController.of(context);
+                return ListenableBuilder(
+                  listenable: controller,
+                  builder: (context, _) =>
+                      _tabs[controller.index] == ChallengeCategory.done
+                      ? const SizedBox.shrink()
+                      : const ChallengeFilterBar(),
+                );
+              },
+            ),
             Expanded(
               child: TabBarView(
                 children: [for (final c in _tabs) ChallengeListView(category: c)],

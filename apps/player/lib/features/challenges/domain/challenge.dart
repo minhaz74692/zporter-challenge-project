@@ -9,6 +9,8 @@ class CreatorSummary extends Equatable {
     required this.displayName,
     required this.handle,
     this.avatarUrl,
+    this.country,
+    this.city,
     this.club,
     this.position,
   });
@@ -17,20 +19,31 @@ class CreatorSummary extends Equatable {
   final String displayName;
   final String handle;
   final String? avatarUrl;
+  final String? country;
+  final String? city;
   final String? club;
   final String? position;
+
+  /// `SE/Stockholm` when both are set, else whichever exists.
+  String? get location {
+    final parts = [country, city].where((p) => p != null && p.isNotEmpty);
+    return parts.isEmpty ? null : parts.join('/');
+  }
 
   factory CreatorSummary.fromJson(Map<String, dynamic> json) => CreatorSummary(
     id: json['id'] as String,
     displayName: json['displayName'] as String,
     handle: json['handle'] as String,
     avatarUrl: json['avatarUrl'] as String?,
+    country: json['country'] as String?,
+    city: json['city'] as String?,
     club: json['club'] as String?,
     position: json['position'] as String?,
   );
 
   @override
-  List<Object?> get props => [id, displayName, handle, avatarUrl, club, position];
+  List<Object?> get props =>
+      [id, displayName, handle, avatarUrl, country, city, club, position];
 }
 
 /// Kind of a media-gallery item. `youtube` carries the watch URL + a thumbnail.
@@ -56,16 +69,34 @@ class MediaItem extends Equatable {
   final MediaKind type;
   final String? thumbnailUrl;
 
-  /// A YouTube watch URL → an `img.youtube.com` still, used when the API didn't
-  /// send one.
+  /// A 16:9 `img.youtube.com` still for a YouTube item. `default/hqdefault/
+  /// sddefault.jpg` are 4:3 with baked-in letterbox bars, so those are rewritten
+  /// to `hq720.jpg` even when the API supplied them; a missing thumbnail is
+  /// derived the same way.
   String? get resolvedThumbnail {
-    if (thumbnailUrl != null && thumbnailUrl!.isNotEmpty) return thumbnailUrl;
-    if (type != MediaKind.youtube) return null;
-    final id = _youtubeId(url);
-    return id == null ? null : 'https://img.youtube.com/vi/$id/hqdefault.jpg';
+    final given = thumbnailUrl;
+    if (given != null && given.isNotEmpty) {
+      if (type != MediaKind.youtube) return given;
+      return given.replaceFirst(
+        RegExp(r'/(?:default|hqdefault|sddefault)\.jpg(\?.*)?$'),
+        '/hq720.jpg',
+      );
+    }
+    return _youtubeStill('hq720.jpg');
   }
 
-  static String? _youtubeId(String url) {
+  /// Guaranteed-to-exist 16:9 fallback still if [resolvedThumbnail] 404s.
+  String? get fallbackThumbnail => _youtubeStill('mqdefault.jpg');
+
+  String? _youtubeStill(String name) {
+    if (type != MediaKind.youtube) return null;
+    final id = youtubeId(url);
+    return id == null ? null : 'https://img.youtube.com/vi/$id/$name';
+  }
+
+  /// The 11-char video id from a `watch?v=` / `youtu.be/` URL, for in-app
+  /// playback. Null if [url] isn't a recognisable YouTube link.
+  static String? youtubeId(String url) {
     final uri = Uri.tryParse(url);
     if (uri == null) return null;
     final v = uri.queryParameters['v'];
@@ -186,6 +217,12 @@ class Challenge extends Equatable {
         MediaItem(url: mediaVideoUrl!, type: MediaKind.video),
     ];
   }
+
+  /// True when the gallery holds a video / YouTube item anywhere (the cover
+  /// image is usually item 0, so `first` alone is unreliable). Drives the
+  /// card's shorter cover treatment.
+  bool get hasVideoCover =>
+      galleryItems.any((m) => m.type != MediaKind.image);
 
   factory Challenge.fromJson(Map<String, dynamic> json) => Challenge(
     id: json['id'] as String,

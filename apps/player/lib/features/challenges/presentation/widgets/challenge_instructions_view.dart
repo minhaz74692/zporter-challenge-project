@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/widgets/gradient_panel.dart';
 import '../../domain/challenge.dart';
 import 'challenge_cover_header.dart';
@@ -24,7 +25,11 @@ class ChallengeInstructionsView extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          ChallengeCoverHeader(challenge: c, showMeta: false),
+          ChallengeCoverHeader(
+            challenge: c,
+            showMeta: false,
+            topRadius: AppRadii.panel,
+          ),
           // Overlap the image bottom so its hard edge sits behind the rounded
           // corners.
           Transform.translate(
