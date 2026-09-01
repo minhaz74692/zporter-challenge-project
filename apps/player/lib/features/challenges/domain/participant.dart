@@ -13,6 +13,8 @@ class SubmittedResult extends Equatable {
     this.arena,
     this.note,
     required this.submittedAt,
+    this.verified,
+    this.verifiedAt,
   });
 
   /// Raw value: `num` for count/time/score, `bool` for boolean, `String` for text.
@@ -27,6 +29,13 @@ class SubmittedResult extends Equatable {
   final String? note;
   final DateTime submittedAt;
 
+  /// The controller's verdict: `null` = not reviewed yet, `true` = approved,
+  /// `false` = rejected.
+  final bool? verified;
+  final DateTime? verifiedAt;
+
+  bool get isReviewed => verified != null;
+
   factory SubmittedResult.fromJson(Map<String, dynamic> json) => SubmittedResult(
     value: json['value'] as Object,
     unit: ResultUnit.fromApi(json['unit'] as String?),
@@ -36,11 +45,25 @@ class SubmittedResult extends Equatable {
     arena: json['arena'] as String?,
     note: json['note'] as String?,
     submittedAt: DateTime.parse(json['submittedAt'] as String),
+    verified: json['verified'] as bool?,
+    verifiedAt: json['verifiedAt'] == null
+        ? null
+        : DateTime.parse(json['verifiedAt'] as String),
   );
 
   @override
-  List<Object?> get props =>
-      [value, unit, videoUrl, performedAt, controllerRef, arena, note, submittedAt];
+  List<Object?> get props => [
+    value,
+    unit,
+    videoUrl,
+    performedAt,
+    controllerRef,
+    arena,
+    note,
+    submittedAt,
+    verified,
+    verifiedAt,
+  ];
 }
 
 /// A user's membership + progress in one challenge

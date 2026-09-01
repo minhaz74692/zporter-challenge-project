@@ -16,40 +16,25 @@ app runs:
 
 | Running on | `API_BASE_URL` |
 | --- | --- |
-| Deployed API (any target) | `https://zporter-api-d4awjs3cxa-uc.a.run.app` — use `config/cloud.json` |
-| Android emulator + local API | `http://10.0.2.2:3000` (the default — no config needed) |
+| Deployed API (any target) | `https://zporter-api-d4awjs3cxa-uc.a.run.app` — **the default, no flags needed** |
+| Android emulator + local API | `http://10.0.2.2:3000` |
 | iOS simulator + local API | `http://localhost:3000` |
 | Physical device + local API | `http://<your-mac-LAN-IP>:3000` — find it with `ipconfig getifaddr en0` / `ifconfig` |
 
-The value is read from `--dart-define`. The convenient way is a config file:
-`config/cloud.json` (committed, points at Cloud Run) or the git-ignored
-`config/local.json` (copy `config/local.example.json` for a local API).
-
-```jsonc
-// config/cloud.json
-{ "API_BASE_URL": "https://zporter-api-d4awjs3cxa-uc.a.run.app" }
-```
+The default lives in `lib/core/config/app_config.dart` (`String.fromEnvironment`
+fallback). Override it at run time with `--dart-define` — the convenient way is
+the git-ignored `config/local.json` (copy `config/local.example.json`).
 
 ## Run
 
 ```bash
-make cloud        # against the deployed Cloud Run API (config/cloud.json)
-make local        # against a local API           (config/local.json)
-
-make cloud ARGS="-d chrome"   # pass extra flutter args (device, etc.)
+flutter run                                            # Cloud Run API (default)
+flutter run --dart-define-from-file=config/local.json  # local API (edit its API_BASE_URL)
+flutter run --dart-define=API_BASE_URL=http://192.168.0.104:3000   # inline override
 ```
 
-`make local` reads the git-ignored `config/local.json` — edit its `API_BASE_URL`
-for your target: `http://localhost:3000` (iOS simulator),
-`http://10.0.2.2:3000` (Android emulator), `http://<your-LAN-IP>:3000` (device).
-
-Equivalent raw commands, if you prefer:
-
-```bash
-flutter run --dart-define-from-file=config/cloud.json
-flutter run --dart-define-from-file=config/local.json
-flutter run --dart-define=API_BASE_URL=http://192.168.0.104:3000   # inline
-```
+Add `-d <device-id>` (from `flutter devices`) to pick a target, otherwise
+`flutter run` prompts when more than one is connected.
 
 Physical device notes:
 - the device and the Mac must be on the **same Wi-Fi**;

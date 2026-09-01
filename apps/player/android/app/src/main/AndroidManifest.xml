@@ -1,4 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Streaming the result video (video_player) needs network access in
+         release builds; Flutter only injects this for debug/profile. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <!-- Android 13+ runtime notification permission (requested from Dart). -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
 

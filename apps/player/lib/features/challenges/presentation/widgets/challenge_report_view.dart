@@ -13,6 +13,7 @@ import '../../application/submit_result.dart';
 import '../../domain/challenge.dart';
 import '../../domain/participant.dart';
 import '../../domain/result_strategy.dart';
+import 'result_summary_card.dart';
 import 'result_video_field.dart';
 
 /// The "Add result" / "Report" tab. Three states, driven by the viewer's
@@ -143,7 +144,7 @@ class _ChallengeReportViewState extends ConsumerState<ChallengeReportView> {
 
     final Widget body;
     if (submitted != null) {
-      body = _ResultSummary(result: submitted, rank: vp?.rank);
+      body = ResultSummaryCard(result: submitted, rank: vp?.rank);
     } else if (vp != null && vp.hasAccepted && !c.hasEnded) {
       body = _form();
     } else if (c.hasEnded) {
@@ -312,112 +313,4 @@ class _StepArrow extends StatelessWidget {
     onTap: onTap,
     child: Icon(icon, size: 20, color: AppColors.muted),
   );
-}
-
-/// Read-only view of the result the player already reported.
-class _ResultSummary extends StatelessWidget {
-  const _ResultSummary({required this.result, this.rank});
-
-  final SubmittedResult result;
-  final int? rank;
-
-  String get _value {
-    final v = result.value;
-    if (v is bool) return v ? 'Completed' : 'Not completed';
-    return '$v ${result.unit.short}'.trim();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            const Icon(
-              Icons.check_circle_rounded,
-              color: AppColors.success,
-              size: 22,
-            ),
-            const SizedBox(width: 8),
-            const Text(
-              'Result reported',
-              style: TextStyle(
-                color: AppColors.fg,
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const Spacer(),
-            if (rank != null)
-              Text(
-                '#$rank',
-                style: const TextStyle(
-                  color: AppColors.success,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Text(
-          _value,
-          style: const TextStyle(
-            color: AppColors.fg,
-            fontSize: 30,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: 20),
-        _Line(label: 'Performed', value: formatDateAtTime(result.performedAt)),
-        if (result.arena != null && result.arena!.isNotEmpty)
-          _Line(label: 'Arena', value: result.arena!),
-        _Line(label: 'Controller', value: result.controllerRef),
-        _Line(
-          label: 'Video',
-          value: result.videoUrl.isEmpty ? '—' : 'Added',
-        ),
-        if (result.note != null && result.note!.isNotEmpty)
-          _Line(label: 'Note', value: result.note!),
-        const SizedBox(height: 16),
-        Text(
-          'Reported ${formatDateAtTime(result.submittedAt)}',
-          style: const TextStyle(color: AppColors.faint, fontSize: 12),
-        ),
-      ],
-    );
-  }
-}
-
-class _Line extends StatelessWidget {
-  const _Line({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 92,
-            child: Text(
-              label,
-              style: const TextStyle(color: AppColors.muted, fontSize: 13),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(color: AppColors.fg, fontSize: 14),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }

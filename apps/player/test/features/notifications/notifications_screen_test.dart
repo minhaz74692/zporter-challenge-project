@@ -1,4 +1,7 @@
 import 'package:challenge/features/challenges/data/challenges_providers.dart';
+import 'package:challenge/features/challenges/domain/challenge_enums.dart';
+import 'package:challenge/features/challenges/domain/participant.dart';
+import 'package:challenge/features/challenges/presentation/widgets/result_video_player.dart';
 import 'package:challenge/features/notifications/data/notifications_repository_impl.dart';
 import 'package:challenge/features/notifications/domain/app_notification.dart';
 import 'package:challenge/features/notifications/presentation/notifications_screen.dart';
@@ -58,7 +61,9 @@ void main() {
     expect(find.text('challenge c9'), findsOneWidget);
   });
 
-  testWidgets('a verify request opens the approve/reject sheet', (tester) async {
+  testWidgets('a verify request shows the reported result + verify/reject', (
+    tester,
+  ) async {
     final (_, challenges) = await pump(tester, [
       buildNotification(
         id: 'v1',
@@ -67,15 +72,40 @@ void main() {
         actorId: 'u_priya',
       ),
     ]);
+    challenges.participantRows = [
+      Participant(
+        userId: 'u_priya',
+        displayName: 'Priya Nair',
+        handle: '#Priya',
+        inviteState: InviteState.accepted,
+        resultState: ResultState.submitted,
+        joinedAt: DateTime.utc(2026),
+        submittedResult: SubmittedResult(
+          value: 42,
+          unit: ResultUnit.reps,
+          videoUrl: 'https://videos.test/clip.mp4',
+          performedAt: DateTime.utc(2026, 8, 30, 10),
+          controllerRef: '#Coach',
+          submittedAt: DateTime.utc(2026, 8, 30, 12),
+        ),
+      ),
+    ];
 
     await tester.tap(find.text('Priya asked you to verify a result'));
-    await tester.pumpAndSettle();
+    // Not pumpAndSettle: the video preview spins forever without a platform.
+    for (var i = 0; i < 6; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
 
+    expect(find.text('Submitted by Priya Nair'), findsOneWidget);
+    expect(find.byType(ResultVideoPlayer), findsOneWidget);
     expect(find.text('VERIFY'), findsOneWidget);
     expect(find.text('REJECT'), findsOneWidget);
 
     await tester.tap(find.text('VERIFY'));
-    await tester.pumpAndSettle();
+    for (var i = 0; i < 6; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
 
     expect(challenges.verified, [('c1', 'u_priya', true)]);
   });
