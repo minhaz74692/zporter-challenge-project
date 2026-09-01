@@ -53,13 +53,13 @@ abstract final class AppColors {
   static const pillEquipment = Color(0xFF818389); // grey — equipment tags
   static const pillSkill = badge; // blue (#4654EA) — skill / collection tags
 
-  // Leaderboard medals.
-  static const medalGold = Color(0xFFF5C451);
-  static const medalSilver = Color(0xFFC7CCD6);
-  static const medalBronze = Color(0xFFCD7F42);
+  // Leaderboard podium badges (Figma "material-looks-one/two/three").
+  static const medalGold = Color(0xFFFFD700);
+  static const medalSilver = Color(0xFFC0C0C0);
+  static const medalBronze = Color(0xFFCD7F32);
 
-  /// The lavender row index on the participants list.
-  static const indexLavender = Color(0xFFB9A7F0);
+  /// The purple row index on the participants list (Figma #C05BFF).
+  static const indexLavender = Color(0xFFC05BFF);
 
   static const onPrimary = Color(0xFFFFFFFF);
 }

@@ -98,15 +98,23 @@ class _ControllerPickerSheet extends ConsumerWidget {
             ),
             Flexible(
               child: participants.when(
-                loading: () => const Padding(
-                  padding: EdgeInsets.all(28),
+                // Fixed height so the sheet doesn't balloon to full-screen
+                // while loading (Flexible + Center would expand to the max).
+                loading: () => const SizedBox(
+                  height: 96,
                   child: Center(child: CircularProgressIndicator()),
                 ),
-                error: (_, __) => const _Empty("Couldn't load participants."),
+                error: (_, __) => const SizedBox(
+                  height: 96,
+                  child: _Empty("Couldn't load participants."),
+                ),
                 data: (people) {
                   final rows = _candidates(creator, teammates, people);
                   if (rows.isEmpty) {
-                    return const _Empty('No coach or teammates found.');
+                    return const SizedBox(
+                      height: 96,
+                      child: _Empty('No coach or teammates found.'),
+                    );
                   }
                   return ListView.separated(
                     shrinkWrap: true,

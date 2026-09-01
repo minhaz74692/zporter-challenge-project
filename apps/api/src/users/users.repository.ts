@@ -20,7 +20,7 @@ const COLLECTION = 'users';
 export class UsersRepository {
   private readonly col: CollectionReference<DocumentData>;
 
-  constructor(@Inject(FIRESTORE) db: Firestore) {
+  constructor(@Inject(FIRESTORE) private readonly db: Firestore) {
     this.col = db.collection(COLLECTION);
   }
 
@@ -65,6 +65,34 @@ export class UsersRepository {
     return snap.docs
       .map((d) => this.fromDoc(d))
       .filter((u) => u.id !== excludeId);
+  }
+
+  /**
+   * Every other member of every squad `userId` belongs to (coach included).
+   * Team-account signup joins players to `teams/{id}/members` without a `club`,
+   * so this is the squad-based half of "teammates". Scans all squads in memory
+   * (prototype scale — a handful) to avoid a collection-group index.
+   */
+  async listSquadmateIds(userId: string): Promise<string[]> {
+    let teams;
+    try {
+      teams = await this.db.collection('teams').get();
+    } catch {
+      return [];
+    }
+
+    const rosters = await Promise.all(
+      teams.docs.map((team) => team.ref.collection('members').get()),
+    );
+    const ids = new Set<string>();
+    for (const roster of rosters) {
+      const memberIds = roster.docs.map(
+        (d) => (d.data().userId as string | undefined) ?? d.id,
+      );
+      if (!memberIds.includes(userId)) continue; // not my squad
+      for (const id of memberIds) if (id && id !== userId) ids.add(id);
+    }
+    return [...ids];
   }
 
   /**

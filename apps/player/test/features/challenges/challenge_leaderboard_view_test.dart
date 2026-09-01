@@ -51,10 +51,10 @@ void main() {
     expect(find.text('Leo Messi'), findsOneWidget);
   });
 
-  testWidgets("the viewer's own row is green", (tester) async {
+  testWidgets('the leading (rank 1) row is green', (tester) async {
     await pump(tester);
 
-    final mine = tester.widget<Text>(find.text('Mohamed Salah'));
-    expect(mine.style?.color, const Color(0xFF25D07D)); // AppColors.success
+    final leader = tester.widget<Text>(find.text('Mohamed Salah')); // rank 1
+    expect(leader.style?.color, const Color(0xFF09E099)); // AppColors.completed
   });
 }

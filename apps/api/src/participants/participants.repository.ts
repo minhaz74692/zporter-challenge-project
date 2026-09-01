@@ -26,6 +26,8 @@ function denormalisedUser(user: UserSummary) {
     displayName: user.displayName,
     handle: user.handle,
     avatarUrl: user.avatarUrl,
+    country: user.country,
+    city: user.city,
     club: user.club,
     position: user.position,
   };

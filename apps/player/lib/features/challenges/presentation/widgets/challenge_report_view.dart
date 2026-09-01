@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/util/formatters.dart';
+import '../../../../core/widgets/app_icon.dart';
 import '../../../../core/widgets/gradient_panel.dart';
 import '../../../../core/widgets/labeled_field.dart';
 import '../../../../core/widgets/primary_button.dart';
@@ -41,12 +42,13 @@ class ChallengeReportView extends ConsumerStatefulWidget {
 class _ChallengeReportViewState extends ConsumerState<ChallengeReportView> {
   final _value = TextEditingController();
   final _arena = TextEditingController();
+  final _controllerField = TextEditingController();
   bool _toggle = false;
-  bool _shareToFeed = false;
+  // Ships with the submission but has no UI right now — see `_ShareToFeedToggle`.
+  final bool _shareToFeed = false;
   DateTime _performedAt = DateTime.now();
   String? _videoUrl;
   String? _controllerHandle;
-  String? _controllerName;
   bool _submitting = false;
 
   Challenge get c => widget.challenge;
@@ -56,6 +58,7 @@ class _ChallengeReportViewState extends ConsumerState<ChallengeReportView> {
   void dispose() {
     _value.dispose();
     _arena.dispose();
+    _controllerField.dispose();
     super.dispose();
   }
 
@@ -117,7 +120,7 @@ class _ChallengeReportViewState extends ConsumerState<ChallengeReportView> {
     if (choice != null) {
       setState(() {
         _controllerHandle = choice.handle;
-        _controllerName = choice.displayName;
+        _controllerField.text = choice.handle;
       });
     }
   }
@@ -201,6 +204,20 @@ class _ChallengeReportViewState extends ConsumerState<ChallengeReportView> {
     ),
   );
 
+  /// A trailing field glyph from `assets/icon/`, tinted `#818389` — at 50%
+  /// opacity for [faded] icons (calendar), full for the rest (the arena pin).
+  /// Carries a 15px right margin; [fieldDecoration] sizes the slot to match.
+  Widget _fieldIcon(AppIconAsset asset, {bool faded = true}) => Padding(
+    padding: const EdgeInsets.only(right: 15),
+    child: AppIcon(
+      asset,
+      size: 18,
+      color: faded
+          ? AppColors.pillEquipment.withValues(alpha: 0.5)
+          : AppColors.pillEquipment,
+    ),
+  );
+
   Widget _form() {
     return Column(
       children: [
@@ -218,20 +235,31 @@ class _ChallengeReportViewState extends ConsumerState<ChallengeReportView> {
         Row(
           children: [
             Expanded(
+              flex: 6,
               child: LabeledField(
                 label: 'Date',
                 onTap: _pickDate,
-                trailing: const Icon(Icons.calendar_today_rounded, size: 18),
-                child: Text(formatDate(_performedAt)),
+                trailing: _fieldIcon(AppIconAsset.calendar),
+                child: Text(
+                  formatDate(_performedAt),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 14),
+                ),
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
+              flex: 5,
               child: LabeledField(
                 label: 'Time',
                 onTap: _pickTime,
-                trailing: const Icon(Icons.schedule_rounded, size: 18),
-                child: Text(formatTime(_performedAt)),
+                // The Figma uses the calendar glyph on the Time field too.
+                trailing: _fieldIcon(AppIconAsset.calendar),
+                child: Text(
+                  formatTime(_performedAt),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 14),
+                ),
               ),
             ),
           ],
@@ -239,32 +267,49 @@ class _ChallengeReportViewState extends ConsumerState<ChallengeReportView> {
         const SizedBox(height: 16),
         TextFormField(
           controller: _arena,
-          style: const TextStyle(color: AppColors.fg, fontSize: 16),
+          style: const TextStyle(color: AppColors.tabInactive, fontSize: 16),
           decoration: fieldDecoration(
             'Arena',
-            suffixIcon: const Icon(Icons.add_location_alt_outlined, size: 18),
+            suffixIcon: _fieldIcon(AppIconAsset.pin, faded: false),
           ),
         ),
         const SizedBox(height: 16),
-        LabeledField(
-          label: 'Controller',
-          onTap: _pickController,
-          trailing: const Icon(Icons.expand_more_rounded, size: 18),
-          child: Text(
-            _controllerName == null
-                ? 'Select who verifies this'
-                : '$_controllerName  ${_controllerHandle!}',
-            style: TextStyle(
-              color: _controllerName == null ? AppColors.faint : AppColors.fg,
-              fontSize: 16,
-            ),
-          ),
+        TextFormField(
+          controller: _controllerField,
+          style: const TextStyle(color: AppColors.tabInactive, fontSize: 16),
+          onChanged: (v) {
+            final handle = v.trim();
+            _controllerHandle = handle.isEmpty ? null : handle;
+          },
+          decoration: fieldDecoration('Controller', hintText: '#RicNil123456')
+              .copyWith(
+                // Tapping search opens the picker, which fetches the coach /
+                // teammate / participant list.
+                suffixIcon: Padding(
+                  padding: const EdgeInsets.only(right: 15),
+                  child: InkResponse(
+                    onTap: _pickController,
+                    radius: 20,
+                    child: const Icon(
+                      Icons.search_rounded,
+                      size: 20,
+                      color: AppColors.pillEquipment,
+                    ),
+                  ),
+                ),
+                suffixIconConstraints: const BoxConstraints(
+                  maxWidth: 40,
+                  maxHeight: 24,
+                ),
+              ),
         ),
-        const SizedBox(height: 20),
-        _ShareToFeedToggle(
-          value: _shareToFeed,
-          onChanged: (v) => setState(() => _shareToFeed = v),
-        ),
+        // TODO(figma): "Share to my feed" is not part of the current result-form
+        // design — hidden for now. Re-enable with [_ShareToFeedToggle].
+        // const SizedBox(height: 20),
+        // _ShareToFeedToggle(
+        //   value: _shareToFeed,
+        //   onChanged: (v) => setState(() => _shareToFeed = v),
+        // ),
         const SizedBox(height: 26),
         PrimaryButton(
           label: 'Save',
@@ -286,9 +331,9 @@ class _ChallengeReportViewState extends ConsumerState<ChallengeReportView> {
             ),
             textAlign: TextAlign.right,
             style: const TextStyle(
-              color: AppColors.fg,
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
+              color: AppColors.fgStrong,
+              fontSize: 16,
+              fontWeight: FontWeight.w400,
             ),
             decoration: InputDecoration(
               isCollapsed: true,
@@ -301,20 +346,15 @@ class _ChallengeReportViewState extends ConsumerState<ChallengeReportView> {
         const SizedBox(width: 6),
         Text(
           c.resultUnit.short,
-          style: const TextStyle(color: AppColors.muted, fontSize: 14),
+          style: const TextStyle(color: AppColors.fgStrong, fontSize: 16),
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: 16),
         Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _StepArrow(
-              icon: Icons.arrow_drop_up_rounded,
-              onTap: () => _step(1),
-            ),
-            _StepArrow(
-              icon: Icons.arrow_drop_down_rounded,
-              onTap: () => _step(-1),
-            ),
+            _StepArrow(asset: AppIconAsset.up, onTap: () => _step(1)),
+            const SizedBox(height: 4),
+            _StepArrow(asset: AppIconAsset.down, onTap: () => _step(-1)),
           ],
         ),
       ],
@@ -340,18 +380,23 @@ class _ChallengeReportViewState extends ConsumerState<ChallengeReportView> {
 }
 
 class _StepArrow extends StatelessWidget {
-  const _StepArrow({required this.icon, required this.onTap});
+  const _StepArrow({required this.asset, required this.onTap});
 
-  final IconData icon;
+  final AppIconAsset asset;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) => InkWell(
     onTap: onTap,
-    child: Icon(icon, size: 20, color: AppColors.muted),
+    // The up / down SVGs bake in their own 50% opacity.
+    child: AppIcon(asset, size: 9, color: AppColors.pillEquipment),
   );
 }
 
+// "Share to my feed" recognition-concept toggle — hidden until the result-form
+// design brings it back. The `shareToFeed` flag still ships with the submission
+// (always false for now); restore the widget below and its call site in `_form`.
+/*
 /// "Share to my feed" recognition concept toggle. The flag is persisted with the
 /// result; there is no feed pipeline in this slice (documented as a next step).
 class _ShareToFeedToggle extends StatelessWidget {
@@ -389,3 +434,4 @@ class _ShareToFeedToggle extends StatelessWidget {
     );
   }
 }
+*/

@@ -18,7 +18,7 @@ class LoginScreen extends ConsumerStatefulWidget {
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _email = TextEditingController(text: 'player1@zporter.test');
+  final _email = TextEditingController(text: 'jhon@gmail.com');
   final _password = TextEditingController(text: 'password123#');
 
   @override

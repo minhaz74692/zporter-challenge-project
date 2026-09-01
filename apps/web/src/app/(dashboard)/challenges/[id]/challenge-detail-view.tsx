@@ -81,6 +81,7 @@ export function ChallengeDetailView({
         <CoverHeader
           src={challenge.mediaImageUrl}
           media={challenge.media}
+          ratioClassName="aspect-video"
           className="rounded-none"
         />
       ) : null}

@@ -265,7 +265,8 @@ class _ChallengeCoverHeaderState extends State<ChallengeCoverHeader> {
             // current video in-app.
             if (items.isNotEmpty && items[_index].type != MediaKind.image)
               Positioned(
-                top: 0,
+                // Nudged 20px below the band's centre line, per the Figma.
+                top: 20,
                 left: 0,
                 right: 0,
                 height: c.maxWidth * _imageBandFraction,
@@ -427,23 +428,16 @@ class _PlayButton extends StatelessWidget {
   /// `GestureDetector` owns the tap.
   final VoidCallback? onTap;
 
-  // Figma "play_circle_outline" — 62px ring + triangle in #09E099. A darker
-  // disc + drop shadow keep it legible over a bright poster or the scrim.
+  // Figma "play_circle_outline" — a 62px ring + triangle in #09E099 on a
+  // transparent fill (no disc, no drop shadow).
   @override
   Widget build(BuildContext context) {
     final button = Container(
       width: 62,
       height: 62,
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.45),
         shape: BoxShape.circle,
         border: Border.all(color: AppColors.completed, width: 3),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.35),
-            blurRadius: 12,
-          ),
-        ],
       ),
       child: const Icon(
         Icons.play_arrow_rounded,

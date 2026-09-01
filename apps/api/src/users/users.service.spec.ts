@@ -47,6 +47,12 @@ class FakeUsersRepository {
       (u) => u.club === club && u.id !== excludeId,
     );
   }
+
+  /** Test double: squads seeded via `squadmates` below. */
+  squadmates = new Map<string, string[]>();
+  async listSquadmateIds(userId: string): Promise<string[]> {
+    return this.squadmates.get(userId) ?? [];
+  }
 }
 
 const signup: SignupRequest = {
@@ -143,8 +149,41 @@ describe('UsersService', () => {
     expect(mates[0]).not.toHaveProperty('email');
   });
 
-  it('teammates is empty when the caller has no club', async () => {
+  it('teammates is empty when the caller has no club and no squad', async () => {
     const me = await service.create({ ...signup, email: 'd@z.test' });
     expect(await service.teammates(me.id)).toEqual([]);
+  });
+
+  it('teammates includes squad-mates even without a shared club', async () => {
+    const repo = service['repo'] as unknown as {
+      squadmates: Map<string, string[]>;
+    };
+    const me = await service.create({ ...signup, email: 'e@z.test' });
+    const squadmate = await service.create(
+      { ...signup, email: 'f@z.test', displayName: 'Steve Rogers' },
+    );
+    repo.squadmates.set(me.id, [squadmate.id]);
+
+    const mates = await service.teammates(me.id);
+    expect(mates.map((m) => m.id)).toEqual([squadmate.id]);
+  });
+
+  it('teammates unions club-mates and squad-mates without duplicates', async () => {
+    const repo = service['repo'] as unknown as {
+      squadmates: Map<string, string[]>;
+    };
+    const me = await service.create({ ...signup, email: 'g@z.test' }, { club: 'Maj FC' });
+    const clubMate = await service.create(
+      { ...signup, email: 'h@z.test', displayName: 'Club Mate' },
+      { club: 'Maj FC' },
+    );
+    const squadOnly = await service.create(
+      { ...signup, email: 'i@z.test', displayName: 'Squad Only' },
+    );
+    // clubMate is also flagged as a squad-mate — must not appear twice.
+    repo.squadmates.set(me.id, [clubMate.id, squadOnly.id]);
+
+    const ids = (await service.teammates(me.id)).map((m) => m.id).sort();
+    expect(ids).toEqual([clubMate.id, squadOnly.id].sort());
   });
 });

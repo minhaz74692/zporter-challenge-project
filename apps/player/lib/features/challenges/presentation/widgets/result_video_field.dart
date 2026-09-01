@@ -57,8 +57,10 @@ class _ResultVideoFieldState extends ConsumerState<ResultVideoField> {
               onTap: () => Navigator.pop(context, ImageSource.camera),
             ),
             ListTile(
-              leading:
-                  const Icon(Icons.photo_library_rounded, color: AppColors.fg),
+              leading: const Icon(
+                Icons.photo_library_rounded,
+                color: AppColors.fg,
+              ),
               title: const Text(
                 'Choose from gallery',
                 style: TextStyle(color: AppColors.fg),
@@ -121,7 +123,8 @@ class _ResultVideoFieldState extends ConsumerState<ResultVideoField> {
       children: [
         const Text(
           'Video documentation',
-          style: TextStyle(color: AppColors.muted, fontSize: 14),
+          textAlign: TextAlign.center,
+          style: TextStyle(color: AppColors.tabInactive, fontSize: 16),
         ),
         const SizedBox(height: 12),
         if (_phase == _Phase.uploaded && _uploadedUrl != null)
@@ -129,13 +132,13 @@ class _ResultVideoFieldState extends ConsumerState<ResultVideoField> {
         else
           InkWell(
             onTap: _start,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(4),
             child: Container(
-              height: 190,
+              height: 160,
               width: double.infinity,
               decoration: BoxDecoration(
-                color: AppColors.surfaceRaised,
-                borderRadius: BorderRadius.circular(12),
+                color: AppColors.discFill,
+                borderRadius: BorderRadius.circular(4),
                 border: _phase == _Phase.error
                     ? Border.all(color: AppColors.danger)
                     : null,
@@ -153,7 +156,7 @@ class _ResultVideoFieldState extends ConsumerState<ResultVideoField> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        ResultVideoPlayer(url: url, height: 190),
+        ResultVideoPlayer(url: url, height: 160),
         Align(
           alignment: Alignment.centerRight,
           child: TextButton.icon(
@@ -175,10 +178,14 @@ class _ResultVideoFieldState extends ConsumerState<ResultVideoField> {
   Widget _content() {
     switch (_phase) {
       case _Phase.empty:
-        return const Icon(
-          Icons.video_call_rounded,
-          size: 52,
-          color: AppColors.faint,
+        // Figma: a 30x24 movie-camera glyph.
+        return const SizedBox(
+          width: 40,
+          height: 40,
+          child: FittedBox(
+            fit: BoxFit.fill,
+            child: Icon(Icons.video_call_rounded, color: AppColors.tabInactive),
+          ),
         );
       case _Phase.uploading:
         return const Column(

@@ -10,7 +10,11 @@ enum AppIconAsset {
   alarm('alarm'),
   trophy('trophy'),
   order('order'), // sort-direction ⇅ in the filter bar
-  sort('sort'); // filter ☰ in the filter bar
+  sort('sort'), // filter ☰ in the filter bar
+  calendar('calendar'), // date / time field on the result form
+  pin('pin'), // "add location" on the arena field
+  up('up'), // result stepper — increment (SVG carries its own 50% opacity)
+  down('down'); // result stepper — decrement
 
   const AppIconAsset(this._name);
 

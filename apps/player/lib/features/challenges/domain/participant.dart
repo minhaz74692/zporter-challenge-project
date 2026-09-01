@@ -81,6 +81,8 @@ class Participant extends Equatable {
     required this.displayName,
     required this.handle,
     this.avatarUrl,
+    this.country,
+    this.city,
     this.club,
     this.position,
     required this.inviteState,
@@ -96,6 +98,8 @@ class Participant extends Equatable {
   final String displayName;
   final String handle;
   final String? avatarUrl;
+  final String? country;
+  final String? city;
   final String? club;
   final String? position;
   final InviteState inviteState;
@@ -113,6 +117,8 @@ class Participant extends Equatable {
     displayName: json['displayName'] as String,
     handle: json['handle'] as String? ?? '',
     avatarUrl: json['avatarUrl'] as String?,
+    country: json['country'] as String?,
+    city: json['city'] as String?,
     club: json['club'] as String?,
     position: json['position'] as String?,
     inviteState: InviteState.fromApi(json['inviteState'] as String?),
@@ -136,6 +142,8 @@ class Participant extends Equatable {
     displayName,
     handle,
     avatarUrl,
+    country,
+    city,
     club,
     position,
     inviteState,

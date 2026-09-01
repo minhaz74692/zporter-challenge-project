@@ -21,6 +21,9 @@ export function CoverHeader({
   topRight,
   priority = false,
   interactiveMedia = true,
+  /** Aspect ratio of the frame. Card = wide 2:1; detail passes 16:9 so an
+   *  embedded YouTube player has room for its own chrome. */
+  ratioClassName = 'aspect-[2/1]',
   className,
 }: {
   src?: string;
@@ -32,6 +35,7 @@ export function CoverHeader({
   priority?: boolean;
   /** false inside a card `<Link>`: video / YouTube slides stay static posters. */
   interactiveMedia?: boolean;
+  ratioClassName?: string;
   className?: string;
 }) {
   const gallery = media && media.length > 1 ? media : null;
@@ -39,7 +43,8 @@ export function CoverHeader({
   return (
     <div
       className={cn(
-        'relative aspect-[2/1] w-full overflow-hidden bg-surface-2',
+        'relative w-full overflow-hidden bg-surface-2',
+        ratioClassName,
         className,
       )}
     >

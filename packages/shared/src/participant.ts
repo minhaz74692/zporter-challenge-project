@@ -32,6 +32,8 @@ export interface Participant {
   displayName: string;
   handle: string;
   avatarUrl?: string;
+  country?: string;
+  city?: string;
   club?: string;
   position?: string;
   inviteState: InviteState;

@@ -107,9 +107,21 @@ export class UsersService {
    */
   async teammates(userId: string): Promise<UserSummary[]> {
     const me = await this.getById(userId);
-    if (!me.club) return [];
-    const mates = await this.repo.listByClub(me.club, userId);
-    return mates.map(toUserSummary);
+    const [byClub, squadmateIds] = await Promise.all([
+      me.club ? this.repo.listByClub(me.club, userId) : Promise.resolve([]),
+      this.repo.listSquadmateIds(userId),
+    ]);
+
+    const seen = new Set(byClub.map((u) => u.id));
+    const extra = (
+      await Promise.all(
+        squadmateIds
+          .filter((id) => !seen.has(id))
+          .map((id) => this.repo.findById(id).catch(() => null)),
+      )
+    ).filter((u): u is NonNullable<typeof u> => u != null);
+
+    return [...byClub, ...extra].map(toUserSummary);
   }
 }
 

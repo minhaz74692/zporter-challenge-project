@@ -11,6 +11,8 @@ export function participantFromDoc(snap: DocumentSnapshot<DocumentData>): Partic
     displayName: data.displayName,
     handle: data.handle,
     avatarUrl: data.avatarUrl,
+    country: data.country,
+    city: data.city,
     club: data.club,
     position: data.position,
     inviteState: data.inviteState,

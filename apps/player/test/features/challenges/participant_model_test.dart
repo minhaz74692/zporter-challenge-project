@@ -42,10 +42,31 @@ void main() {
         'joinedAt': '2026-01-01T00:00:00.000Z',
       });
       expect(p.handle, '');
+      expect(p.country, isNull);
+      expect(p.city, isNull);
       expect(p.club, isNull);
       expect(p.rank, isNull);
       expect(p.submittedResult, isNull);
       expect(p.respondedAt, isNull);
+    });
+
+    test('reads the denormalised location fields', () {
+      final p = Participant.fromJson({
+        'userId': 'u1',
+        'displayName': 'Neo Jönsson',
+        'handle': '#NeoJon070119',
+        'country': 'SE',
+        'city': 'Stockholm',
+        'club': 'Hammarby IF',
+        'position': 'RW',
+        'inviteState': 'accepted',
+        'resultState': 'pending',
+        'joinedAt': '2026-01-01T00:00:00.000Z',
+      });
+      expect(p.country, 'SE');
+      expect(p.city, 'Stockholm');
+      expect(p.club, 'Hammarby IF');
+      expect(p.position, 'RW');
     });
   });
 
