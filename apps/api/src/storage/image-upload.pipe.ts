@@ -7,6 +7,7 @@ import {
   IMAGE_MIME_PATTERN,
   MAX_IMAGE_BYTES,
   MAX_VIDEO_BYTES,
+  MEDIA_MIME_PATTERN,
   VIDEO_MIME_PATTERN,
 } from './storage.constants.js';
 
@@ -40,6 +41,22 @@ export const parseVideoUpload = new ParseFilePipe({
     new MaxFileSizeValidator({ maxSize: MAX_VIDEO_BYTES }),
     new FileTypeValidator({
       fileType: VIDEO_MIME_PATTERN,
+      skipMagicNumbersValidation: true,
+    }),
+  ],
+});
+
+/**
+ * `@UploadedFiles()` pipe for the challenge media-gallery endpoint — accepts a
+ * mix of images and videos, and tolerates *no* files (a YouTube-links-only
+ * request). Per-type size limits are re-checked in `StorageService`.
+ */
+export const parseMediaUploads = new ParseFilePipe({
+  fileIsRequired: false,
+  validators: [
+    new MaxFileSizeValidator({ maxSize: MAX_VIDEO_BYTES }),
+    new FileTypeValidator({
+      fileType: MEDIA_MIME_PATTERN,
       skipMagicNumbersValidation: true,
     }),
   ],

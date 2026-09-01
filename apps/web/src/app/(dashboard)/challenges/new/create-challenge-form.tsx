@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useActionState, useState } from 'react';
-import { ChevronLeft, Clock, Image as ImageIcon, Share2, SquarePlay, Video } from 'lucide-react';
+import { ChevronLeft, Clock } from 'lucide-react';
 import { cn } from '@/components/ui/cn';
 import type { CreateState } from '../actions';
 import {
@@ -26,6 +26,7 @@ import { PointsSlider } from '@/components/form/points-slider';
 import { RichTextArea } from '@/components/form/rich-text-area';
 import { InvitesPanel } from '@/components/challenges/invites-panel';
 import { LeaderboardBoard } from '@/components/challenges/leaderboard-board';
+import { MediaPicker } from '@/components/challenges/media-picker';
 import type { ChallengePrefill } from './prefill';
 
 function iso(offsetDays: number) {
@@ -42,13 +43,6 @@ function splitIso(value: string) {
     time: `${pad(d.getHours())}:${pad(d.getMinutes())}`,
   };
 }
-
-const MEDIA = [
-  { icon: ImageIcon, label: 'Add image' },
-  { icon: Video, label: 'Add video' },
-  { icon: SquarePlay, label: 'Add YouTube link' },
-  { icon: Share2, label: 'Share' },
-];
 
 const TABS = [
   { id: 'challenge', label: 'Challenge' },
@@ -177,20 +171,8 @@ export function CreateChallengeForm({
             </div>
           </div>
 
-          {/* media row */}
-          <div className="flex items-center gap-3">
-            {MEDIA.map(({ icon: Icon, label: l }) => (
-              <span
-                key={l}
-                title={l}
-                className="flex h-10 w-10 items-center justify-center rounded-[var(--radius-control)] bg-field/80 text-muted ring-1 ring-white/[0.04]"
-              >
-                <Icon className="h-[18px] w-[18px]" />
-              </span>
-            ))}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/zai.png" alt="Zai" className="ml-auto h-5 w-auto" />
-          </div>
+          {/* media row — files upload after the challenge is saved */}
+          <MediaPicker carried={p?.media ?? []} />
 
           {/* time + location */}
           <div className="grid gap-3 sm:grid-cols-2">

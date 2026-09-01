@@ -4,11 +4,13 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import type {
   Challenge,
   ChallengeCategory,
   ChallengeDetail,
   LeaderboardEntry,
+  MediaItem,
   Participant,
   ParticipantSummary,
   ResultType,
@@ -16,6 +18,11 @@ import type {
   SubmitResultRequest,
   UserSummary,
 } from '@zporter/shared';
+import {
+  deriveLegacy,
+  storagePathFromDownloadUrl,
+  toYoutubeItem,
+} from './media.util.js';
 import { BadgesService } from '../badges/badges.service.js';
 import { notificationCopy } from '../notifications/notification-copy.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
@@ -346,20 +353,103 @@ export class ChallengesService {
     };
   }
 
-  /** Upload / replace the challenge's cover image (Figma create-form media). */
+  /**
+   * Upload / replace the primary cover image — it becomes the first `image`
+   * item in the media gallery (kept for the web `CoverUpload` component).
+   */
   async setCover(
     challengeId: string,
     user: AuthenticatedUser,
     image: UploadedImage,
   ): Promise<Challenge> {
     const challenge = await this.requireOwned(challengeId, user);
-    const mediaImageUrl = await this.storage.uploadImage({
+    const url = await this.storage.uploadImage({
       buffer: image.buffer,
       mimeType: image.mimetype,
-      path: `challenges/${challenge.id}/cover`,
+      path: `challenges/${challenge.id}/media/${randomUUID()}`,
     });
-    await this.repo.updateFields(challenge.id, { mediaImageUrl });
-    return this.withCreator({ ...challenge, mediaImageUrl });
+    const media: MediaItem[] = [
+      { url, type: 'image' },
+      ...challenge.media.filter((m) => m.url !== challenge.mediaImageUrl),
+    ];
+    return this.writeMedia(challenge, media);
+  }
+
+  /** Append uploaded files + YouTube links to the media gallery (owner/admin). */
+  async addMedia(
+    challengeId: string,
+    user: AuthenticatedUser,
+    files: UploadedImage[],
+    youtubeLinks: string[],
+  ): Promise<Challenge> {
+    const challenge = await this.requireOwned(challengeId, user);
+    if (files.length === 0 && youtubeLinks.length === 0) {
+      throw new BadRequestException('Add at least one file or YouTube link');
+    }
+
+    const uploaded: MediaItem[] = [];
+    for (const file of files) {
+      const isVideo = file.mimetype.startsWith('video/');
+      const path = `challenges/${challengeId}/media/${randomUUID()}`;
+      const url = isVideo
+        ? await this.storage.uploadVideo({ buffer: file.buffer, mimeType: file.mimetype, path })
+        : await this.storage.uploadImage({ buffer: file.buffer, mimeType: file.mimetype, path });
+      uploaded.push({ url, type: isVideo ? 'video' : 'image' });
+    }
+    const links = youtubeLinks.map((l) => toYoutubeItem(l));
+
+    return this.writeMedia(challenge, [...challenge.media, ...uploaded, ...links]);
+  }
+
+  /** Replace / reorder the whole gallery (owner/admin). */
+  async setMedia(
+    challengeId: string,
+    user: AuthenticatedUser,
+    items: MediaItem[],
+  ): Promise<Challenge> {
+    const challenge = await this.requireOwned(challengeId, user);
+    const normalised = items.map((it) =>
+      it.type === 'youtube' ? toYoutubeItem(it.url) : { url: it.url, type: it.type },
+    );
+    return this.writeMedia(challenge, normalised);
+  }
+
+  /** Drop the gallery item at `index` (owner/admin); best-effort Storage delete. */
+  async removeMedia(
+    challengeId: string,
+    user: AuthenticatedUser,
+    index: number,
+  ): Promise<Challenge> {
+    const challenge = await this.requireOwned(challengeId, user);
+    if (!Number.isInteger(index) || index < 0 || index >= challenge.media.length) {
+      throw new BadRequestException('No media item at that position');
+    }
+    const [removed] = challenge.media.slice(index, index + 1);
+    const next = challenge.media.filter((_, i) => i !== index);
+
+    const path = removed && storagePathFromDownloadUrl(removed.url);
+    if (path) await this.storage.deleteObject(path).catch(() => undefined);
+
+    return this.writeMedia(challenge, next);
+  }
+
+  /**
+   * Persist a new gallery and return the challenge. Only `media` is stored —
+   * `mediaImageUrl` / `mediaVideoUrl` are re-derived from it on every read
+   * (`ChallengesRepository.fromDoc`), so they never need writing.
+   */
+  private async writeMedia(
+    challenge: Challenge,
+    media: MediaItem[],
+  ): Promise<Challenge> {
+    await this.repo.updateFields(challenge.id, { media });
+    const legacy = deriveLegacy(media);
+    return this.withCreator({
+      ...challenge,
+      media,
+      mediaImageUrl: legacy.mediaImageUrl ?? undefined,
+      mediaVideoUrl: legacy.mediaVideoUrl ?? undefined,
+    });
   }
 
   /**

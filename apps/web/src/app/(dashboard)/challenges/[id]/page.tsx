@@ -6,10 +6,13 @@ import { ChallengeDetailView } from './challenge-detail-view';
 
 export default async function ChallengeDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ media?: string }>;
 }) {
   const { id } = await params;
+  const { media } = await searchParams;
 
   // Only the two cheap reads block the first paint; the tabs load on demand.
   let challenge: ChallengeDetail;
@@ -29,6 +32,11 @@ export default async function ChallengeDetailPage({
       <Link href="/challenges" className="mb-4 inline-block text-[13px] text-muted hover:text-fg">
         ← Your challenges
       </Link>
+      {media === 'failed' && (
+        <p className="mb-4 rounded-[var(--radius-control)] border border-danger/40 bg-danger/10 px-3 py-2 text-[12px] text-danger">
+          The challenge was saved, but some media could not be uploaded. Try adding it again below.
+        </p>
+      )}
       <ChallengeDetailView challenge={challenge} isOwner={me.id === challenge.createdBy} />
     </div>
   );

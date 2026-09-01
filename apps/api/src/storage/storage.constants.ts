@@ -16,3 +16,7 @@ export const ALLOWED_VIDEO_MIME = [
 export type AllowedVideoMime = (typeof ALLOWED_VIDEO_MIME)[number];
 
 export const VIDEO_MIME_PATTERN = /^video\/(mp4|quicktime|webm)$/;
+
+/** Image OR video — for the challenge media-gallery upload endpoint. */
+export const MEDIA_MIME_PATTERN =
+  /^(image\/(jpeg|png|webp)|video\/(mp4|quicktime|webm))$/;

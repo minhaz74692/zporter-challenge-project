@@ -7,13 +7,14 @@ import type {
   QueryDocumentSnapshot,
 } from 'firebase-admin/firestore';
 import { FIRESTORE } from '../firebase/firebase.constants.js';
+import { deriveLegacy, normalizeMedia } from './media.util.js';
 
 const COLLECTION = 'challenges';
 
 /** Fields the repository writes (id/createdAt/participantCount/creator set elsewhere). */
 export type NewChallenge = Omit<
   Challenge,
-  'id' | 'createdAt' | 'participantCount' | 'creator' | 'likeCount' | 'commentCount'
+  'id' | 'createdAt' | 'participantCount' | 'creator' | 'likeCount' | 'commentCount' | 'media'
 >;
 
 @Injectable()
@@ -71,6 +72,7 @@ export class ChallengesRepository {
       participantCount: 0,
       likeCount: 0,
       commentCount: 0,
+      media: [],
       createdAt: new Date().toISOString(),
       ...data,
     };
@@ -104,6 +106,8 @@ export class ChallengesRepository {
 
   private fromDoc(snap: QueryDocumentSnapshot<DocumentData>): Challenge {
     const data = snap.data();
+    const media = normalizeMedia(data);
+    const legacy = deriveLegacy(media);
     return {
       id: snap.id,
       templateId: data.templateId,
@@ -129,8 +133,9 @@ export class ChallengesRepository {
       ageFrom: data.ageFrom,
       ageTo: data.ageTo,
       position: data.position,
-      mediaImageUrl: data.mediaImageUrl,
-      mediaVideoUrl: data.mediaVideoUrl,
+      media,
+      mediaImageUrl: legacy.mediaImageUrl ?? undefined,
+      mediaVideoUrl: legacy.mediaVideoUrl ?? undefined,
       ratingAverage: data.ratingAverage,
       ratingCount: data.ratingCount,
       likeCount: data.likeCount ?? 0,

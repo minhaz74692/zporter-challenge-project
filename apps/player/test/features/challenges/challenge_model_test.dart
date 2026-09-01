@@ -83,6 +83,49 @@ void main() {
     );
   });
 
+  group('media gallery', () {
+    test('parses a media array with tolerant kind decoding', () {
+      final c = Challenge.fromJson({
+        ...challengeJson(),
+        'media': [
+          {'url': 'https://img/a.jpg', 'type': 'image'},
+          {'url': 'https://v/b.mp4', 'type': 'video'},
+          {'url': 'https://youtu.be/b1Dp2Yl3ARw', 'type': 'youtube', 'thumbnailUrl': 't'},
+          {'url': 'https://x/c', 'type': 'weird'},
+        ],
+      });
+      expect(c.media.map((m) => m.type).toList(), [
+        MediaKind.image,
+        MediaKind.video,
+        MediaKind.youtube,
+        MediaKind.image, // unknown → image
+      ]);
+      expect(c.galleryItems, c.media);
+    });
+
+    test('galleryItems falls back to the legacy fields when media is empty', () {
+      final c = Challenge.fromJson({
+        ...challengeJson(),
+        'media': const [],
+        'mediaImageUrl': 'https://img/cover.jpg',
+        'mediaVideoUrl': 'https://v/clip.mp4',
+      });
+      expect(c.media, isEmpty);
+      expect(c.galleryItems.map((m) => m.type).toList(),
+          [MediaKind.image, MediaKind.video]);
+      expect(c.galleryItems.first.url, 'https://img/cover.jpg');
+    });
+
+    test('a YouTube item derives an img.youtube.com thumbnail when none is sent', () {
+      const item = MediaItem(
+        url: 'https://www.youtube.com/watch?v=b1Dp2Yl3ARw',
+        type: MediaKind.youtube,
+      );
+      expect(item.resolvedThumbnail,
+          'https://img.youtube.com/vi/b1Dp2Yl3ARw/hqdefault.jpg');
+    });
+  });
+
   test('CreatorSummary.fromJson reads the trimmed creator shape', () {
     final creator = CreatorSummary.fromJson({
       'id': 'u_coach',

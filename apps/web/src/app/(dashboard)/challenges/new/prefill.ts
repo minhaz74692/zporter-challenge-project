@@ -4,6 +4,7 @@ import type {
   ChallengeMainCategory,
   ChallengeTemplate,
   ChallengeVisibility,
+  MediaItem,
   ResultType,
   ResultUnit,
   ScoringDirection,
@@ -38,6 +39,8 @@ export interface ChallengePrefill {
   startAt?: string;
   deadline?: string;
   visibility?: ChallengeVisibility;
+  /** Copy mode only — carry the source challenge's gallery (re-sent as JSON). */
+  media?: MediaItem[];
 }
 
 export function prefillFromTemplate(t: ChallengeTemplate): ChallengePrefill {
@@ -88,6 +91,8 @@ export function prefillFromChallenge(
     base.startAt = c.startAt;
     base.deadline = c.deadline;
     base.visibility = c.visibility;
+  } else if (c.media?.length) {
+    base.media = c.media;
   }
   return base;
 }

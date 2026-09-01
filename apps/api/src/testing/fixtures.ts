@@ -24,6 +24,7 @@ export function makeChallenge(over: Partial<Challenge> = {}): Challenge {
     visibility: 'private',
     pointsToParticipate: 0,
     rewardPoints: 0,
+    media: [],
     minParticipants: 1,
     createdBy: 'coach1',
     participantCount: 0,

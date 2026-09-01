@@ -8,6 +8,7 @@ import type {
   ChallengeMainCategory,
   ChallengeVisibility,
   CreateChallengeRequest,
+  MediaItem,
   ResultType,
   ResultUnit,
   ScoringDirection,
@@ -46,7 +47,39 @@ export async function createChallenge(
   } catch (e) {
     return { error: e instanceof ApiError ? e.message : 'Could not create the challenge.' };
   }
-  redirect(`/challenges/${created.id}`);
+
+  // Media can only be attached once the challenge (and its id) exists.
+  const mediaOk = await attachFormMedia(created.id, fd);
+  redirect(mediaOk ? `/challenges/${created.id}` : `/challenges/${created.id}?media=failed`);
+}
+
+/**
+ * Upload the create/edit form's media — `mediaFiles` (File[]) + `youtubeLinks`
+ * (string[]) — plus any `mediaJson` carried from a "copy". Returns false if a
+ * call failed; the challenge itself is untouched either way.
+ */
+async function attachFormMedia(challengeId: string, fd: FormData): Promise<boolean> {
+  const files = fd.getAll('mediaFiles').filter((f): f is File => f instanceof File && f.size > 0);
+  const links = fd.getAll('youtubeLinks').map(String).map((s) => s.trim()).filter(Boolean);
+  const carried = str(fd, 'mediaJson');
+
+  try {
+    if (carried) {
+      const items = JSON.parse(carried) as MediaItem[];
+      if (Array.isArray(items) && items.length > 0) {
+        await api(`/challenges/${challengeId}/media`, { method: 'PUT', body: { items } });
+      }
+    }
+    if (files.length > 0 || links.length > 0) {
+      const forward = new FormData();
+      files.forEach((f) => forward.append('files', f));
+      links.forEach((l) => forward.append('youtubeLinks', l));
+      await api(`/challenges/${challengeId}/media`, { body: forward });
+    }
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /** Build the `CreateChallengeRequest`-shaped body the challenge form submits. */
@@ -99,8 +132,63 @@ export async function updateChallenge(
   } catch (e) {
     return { error: e instanceof ApiError ? e.message : 'Could not save the challenge.' };
   }
+  const mediaOk = await attachFormMedia(challengeId, fd);
   revalidatePath(`/challenges/${challengeId}`);
-  redirect(`/challenges/${challengeId}`);
+  redirect(mediaOk ? `/challenges/${challengeId}` : `/challenges/${challengeId}?media=failed`);
+}
+
+export interface MediaState {
+  error?: string;
+  ok?: boolean;
+}
+
+/** Add media on the detail-page manager (multipart Server Action). */
+export async function addChallengeMedia(
+  challengeId: string,
+  _prev: MediaState,
+  fd: FormData,
+): Promise<MediaState> {
+  const files = fd.getAll('mediaFiles').filter((f): f is File => f instanceof File && f.size > 0);
+  const links = fd.getAll('youtubeLinks').map(String).map((s) => s.trim()).filter(Boolean);
+  if (files.length === 0 && links.length === 0) {
+    return { error: 'Choose a file or paste a YouTube link.' };
+  }
+  const forward = new FormData();
+  files.forEach((f) => forward.append('files', f));
+  links.forEach((l) => forward.append('youtubeLinks', l));
+  try {
+    await api(`/challenges/${challengeId}/media`, { body: forward });
+    revalidatePath(`/challenges/${challengeId}`);
+    return { ok: true };
+  } catch (e) {
+    return { error: e instanceof ApiError ? e.message : 'Upload failed.' };
+  }
+}
+
+/** Remove one gallery item by index (detail-page manager). */
+export async function removeChallengeMedia(
+  challengeId: string,
+  index: number,
+): Promise<void> {
+  try {
+    await api(`/challenges/${challengeId}/media/${index}`, { method: 'DELETE' });
+  } catch {
+    // ignore — the page re-fetches and reflects reality
+  }
+  revalidatePath(`/challenges/${challengeId}`);
+}
+
+/** Replace / reorder the whole gallery (detail-page manager). */
+export async function reorderChallengeMedia(
+  challengeId: string,
+  items: MediaItem[],
+): Promise<void> {
+  try {
+    await api(`/challenges/${challengeId}/media`, { method: 'PUT', body: { items } });
+  } catch {
+    // ignore
+  }
+  revalidatePath(`/challenges/${challengeId}`);
 }
 
 /** Delete a challenge (owner/admin). Bound with the id; used as a `<form action>`. */

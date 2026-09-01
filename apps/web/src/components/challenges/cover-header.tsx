@@ -1,30 +1,41 @@
 import Image from 'next/image';
 import type { ReactNode } from 'react';
 import { Image as ImageIcon } from 'lucide-react';
+import type { MediaItem } from '@zporter/shared';
 import { cn } from '@/components/ui/cn';
+import { MediaCarousel } from './media-carousel';
 
 /**
- * Challenge cover: photo (or a neutral placeholder), a bottom scrim, and an
- * optional centered headline / ingress over it. `topLeft` / `topRight` are free
- * slots for badges. Reused by the card grid and the detail header.
+ * Challenge cover: a single photo, a swipeable {@link MediaCarousel} when the
+ * challenge has more than one media item, or a neutral placeholder — plus a
+ * bottom scrim and an optional centered headline / ingress. `topLeft` /
+ * `topRight` are free slots for badges. Reused by the card grid and the detail
+ * header.
  */
 export function CoverHeader({
   src,
+  media,
   title,
   subtitle,
   topLeft,
   topRight,
   priority = false,
+  interactiveMedia = true,
   className,
 }: {
   src?: string;
+  media?: MediaItem[];
   title?: string;
   subtitle?: string;
   topLeft?: ReactNode;
   topRight?: ReactNode;
   priority?: boolean;
+  /** false inside a card `<Link>`: video / YouTube slides stay static posters. */
+  interactiveMedia?: boolean;
   className?: string;
 }) {
+  const gallery = media && media.length > 1 ? media : null;
+
   return (
     <div
       className={cn(
@@ -32,7 +43,14 @@ export function CoverHeader({
         className,
       )}
     >
-      {src ? (
+      {gallery ? (
+        <MediaCarousel
+          items={gallery}
+          priority={priority}
+          interactive={interactiveMedia}
+          className="absolute inset-0 aspect-auto"
+        />
+      ) : src ? (
         <Image
           src={src}
           alt={title ?? 'Challenge cover'}

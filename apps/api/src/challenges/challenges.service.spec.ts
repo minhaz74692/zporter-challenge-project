@@ -93,7 +93,17 @@ function build() {
     })),
     list: vi.fn(async () => []),
   };
-  const storage = { uploadImage: vi.fn(async () => 'https://img.test/x') };
+  const storage = {
+    uploadImage: vi.fn(
+      async () =>
+        'https://firebasestorage.googleapis.com/v0/b/bkt/o/challenges%2Fc1%2Fmedia%2Fimg?alt=media&token=t',
+    ),
+    uploadVideo: vi.fn(
+      async () =>
+        'https://firebasestorage.googleapis.com/v0/b/bkt/o/challenges%2Fc1%2Fmedia%2Fvid?alt=media&token=t',
+    ),
+    deleteObject: vi.fn(async () => undefined),
+  };
   const teams = {
     // Team fan-out excludes the coach; the coach's squad for invite scoping.
     invitableMemberIds: vi.fn(async () => ['player1', 'player2', 'player3']),
@@ -117,7 +127,7 @@ function build() {
     teams as unknown as TeamsService,
     users as unknown as UsersService,
   );
-  return { service, repo, participants, participation, results, notifications, badges, users, challenges, parts };
+  return { service, repo, participants, participation, results, notifications, badges, storage, users, challenges, parts };
 }
 
 describe('ChallengesService', () => {
@@ -411,6 +421,81 @@ describe('ChallengesService', () => {
       await expect(ctx.service.remindPending('c-rem-old', coach)).rejects.toBeInstanceOf(
         BadRequestException,
       );
+    });
+  });
+
+  describe('media gallery', () => {
+    beforeEach(() => {
+      ctx.challenges.push(
+        makeChallenge({
+          id: 'c-media',
+          createdBy: 'coach1',
+          deadline: FUTURE,
+          media: [{ url: 'https://img/existing.jpg', type: 'image' }],
+        }),
+      );
+    });
+
+    const file = (mimetype: string) => ({
+      buffer: Buffer.from('x'),
+      mimetype,
+      size: 1,
+      originalname: 'f',
+    });
+
+    it('addMedia appends uploads + youtube links and re-derives the cover', async () => {
+      const out = await ctx.service.addMedia(
+        'c-media',
+        coach,
+        [file('image/png'), file('video/mp4')],
+        ['https://youtu.be/b1Dp2Yl3ARw'],
+      );
+      expect(out.media.map((m) => m.type)).toEqual(['image', 'image', 'video', 'youtube']);
+      expect(out.media[3].url).toContain('watch?v=b1Dp2Yl3ARw');
+      expect(out.mediaImageUrl).toBe('https://img/existing.jpg');
+      expect(out.mediaVideoUrl).toContain('media%2Fvid');
+    });
+
+    it('addMedia 400s with neither files nor links', async () => {
+      await expect(ctx.service.addMedia('c-media', coach, [], [])).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+    });
+
+    it('removeMedia splices and deletes the uploaded object', async () => {
+      ctx.challenges.find((c) => c.id === 'c-media')!.media = [
+        {
+          url: 'https://firebasestorage.googleapis.com/v0/b/bkt/o/challenges%2Fc-media%2Fmedia%2Fa?alt=media&token=t',
+          type: 'image',
+        },
+        { url: 'https://www.youtube.com/watch?v=b1Dp2Yl3ARw', type: 'youtube' },
+      ];
+      const out = await ctx.service.removeMedia('c-media', coach, 0);
+      expect(out.media).toHaveLength(1);
+      expect(out.media[0].type).toBe('youtube');
+      expect(ctx.storage.deleteObject).toHaveBeenCalledWith('challenges/c-media/media/a');
+    });
+
+    it('removeMedia 400s on an out-of-range index', async () => {
+      await expect(ctx.service.removeMedia('c-media', coach, 9)).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+    });
+
+    it('setMedia replaces the gallery and re-thumbs youtube items', async () => {
+      const out = await ctx.service.setMedia('c-media', coach, [
+        { url: 'https://youtu.be/b1Dp2Yl3ARw', type: 'youtube' },
+        { url: 'https://img/new.jpg', type: 'image' },
+      ]);
+      expect(out.media[0].thumbnailUrl).toContain('img.youtube.com');
+      expect(out.mediaImageUrl).toBe('https://img/new.jpg');
+    });
+
+    it('all media routes 403 for a non-owner', async () => {
+      const stranger = { userId: 'coach2', role: 'coach' as const };
+      await expect(ctx.service.addMedia('c-media', stranger, [file('image/png')], [])).rejects.toBeInstanceOf(ForbiddenException);
+      await expect(ctx.service.setMedia('c-media', stranger, [])).rejects.toBeInstanceOf(ForbiddenException);
+      await expect(ctx.service.removeMedia('c-media', stranger, 0)).rejects.toBeInstanceOf(ForbiddenException);
     });
   });
 

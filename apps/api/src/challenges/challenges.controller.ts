@@ -5,19 +5,24 @@ import {
   Get,
   HttpCode,
   Param,
+  ParseIntPipe,
   Patch,
   Post,
+  Put,
   Query,
   UploadedFile,
+  UploadedFiles,
   UseInterceptors,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiTags } from '@nestjs/swagger';
 import {
   parseImageUpload,
+  parseMediaUploads,
   parseVideoUpload,
   type MulterFile,
 } from '../storage/image-upload.pipe.js';
+import { SetMediaDto } from './dto/set-media.dto.js';
 import type {
   Challenge,
   ChallengeDetail,
@@ -198,4 +203,60 @@ export class ChallengesController {
   ): Promise<Challenge> {
     return this.challenges.setCover(id, user, file);
   }
+
+  /**
+   * Append gallery media (owner/admin). `files` = images/videos (≤8);
+   * `youtubeLinks` = repeated form field of watch URLs. At least one required.
+   */
+  @Post(':id/media')
+  @Roles('coach', 'admin')
+  @HttpCode(200)
+  @UseInterceptors(FilesInterceptor('files', 8))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        files: { type: 'array', items: { type: 'string', format: 'binary' } },
+        youtubeLinks: { type: 'array', items: { type: 'string' } },
+      },
+    },
+  })
+  addMedia(
+    @Param('id') id: string,
+    @UploadedFiles(parseMediaUploads) files: MulterFile[] | undefined,
+    @Body('youtubeLinks') youtubeLinks: string | string[] | undefined,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<Challenge> {
+    return this.challenges.addMedia(id, user, files ?? [], toArray(youtubeLinks));
+  }
+
+  /** Replace / reorder the whole gallery (owner/admin). */
+  @Put(':id/media')
+  @Roles('coach', 'admin')
+  setMedia(
+    @Param('id') id: string,
+    @Body() dto: SetMediaDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<Challenge> {
+    return this.challenges.setMedia(id, user, dto.items);
+  }
+
+  /** Remove the gallery item at `index` (owner/admin). */
+  @Delete(':id/media/:index')
+  @Roles('coach', 'admin')
+  @HttpCode(200)
+  removeMedia(
+    @Param('id') id: string,
+    @Param('index', ParseIntPipe) index: number,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<Challenge> {
+    return this.challenges.removeMedia(id, user, index);
+  }
+}
+
+/** A repeated form field arrives as a string, an array, or nothing. */
+function toArray(value: string | string[] | undefined): string[] {
+  if (value == null) return [];
+  return (Array.isArray(value) ? value : [value]).map((s) => s.trim()).filter(Boolean);
 }

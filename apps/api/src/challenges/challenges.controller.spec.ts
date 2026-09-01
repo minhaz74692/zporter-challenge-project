@@ -25,6 +25,9 @@ function build() {
     invite: vi.fn().mockResolvedValue({ invited: 2 }),
     remindPending: vi.fn().mockResolvedValue({ reminded: 3 }),
     setCover: vi.fn().mockResolvedValue({ id: 'c1' }),
+    addMedia: vi.fn().mockResolvedValue({ id: 'c1' }),
+    setMedia: vi.fn().mockResolvedValue({ id: 'c1' }),
+    removeMedia: vi.fn().mockResolvedValue({ id: 'c1' }),
   };
   return { svc, controller: new ChallengesController(svc as unknown as ChallengesService) };
 }
@@ -93,6 +96,22 @@ describe('ChallengesController', () => {
     expect(svc.remindPending).toHaveBeenCalledWith('c1', coach);
   });
 
+  it('media routes forward files, links, items and index', async () => {
+    const { svc, controller } = build();
+    const files = [{ buffer: Buffer.from(''), mimetype: 'image/png', size: 1, originalname: 'a' }];
+    await controller.addMedia('c1', files, 'https://youtu.be/b1Dp2Yl3ARw', coach);
+    expect(svc.addMedia).toHaveBeenCalledWith('c1', coach, files, ['https://youtu.be/b1Dp2Yl3ARw']);
+
+    await controller.addMedia('c1', undefined, ['x', ' ', 'y'], coach);
+    expect(svc.addMedia).toHaveBeenLastCalledWith('c1', coach, [], ['x', 'y']);
+
+    await controller.setMedia('c1', { items: [{ url: 'u', type: 'image' }] }, coach);
+    expect(svc.setMedia).toHaveBeenCalledWith('c1', coach, [{ url: 'u', type: 'image' }]);
+
+    await controller.removeMedia('c1', 2, coach);
+    expect(svc.removeMedia).toHaveBeenCalledWith('c1', coach, 2);
+  });
+
   it('restricts create/update/remove/mine/invite/remind/cover to coach+admin, leaves player routes open', () => {
     const roles = (fn: object) => Reflect.getMetadata(ROLES_KEY, fn);
     expect(roles(ChallengesController.prototype.create)).toEqual(['coach', 'admin']);
@@ -102,6 +121,9 @@ describe('ChallengesController', () => {
     expect(roles(ChallengesController.prototype.invite)).toEqual(['coach', 'admin']);
     expect(roles(ChallengesController.prototype.remind)).toEqual(['coach', 'admin']);
     expect(roles(ChallengesController.prototype.setCover)).toEqual(['coach', 'admin']);
+    expect(roles(ChallengesController.prototype.addMedia)).toEqual(['coach', 'admin']);
+    expect(roles(ChallengesController.prototype.setMedia)).toEqual(['coach', 'admin']);
+    expect(roles(ChallengesController.prototype.removeMedia)).toEqual(['coach', 'admin']);
     expect(roles(ChallengesController.prototype.accept)).toBeUndefined();
     expect(roles(ChallengesController.prototype.list)).toBeUndefined();
   });

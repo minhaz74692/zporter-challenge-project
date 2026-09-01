@@ -113,4 +113,15 @@ describe('prefillFromChallenge', () => {
     const p = prefillFromChallenge(CHALLENGE, 'edit');
     expect(p).toMatchObject({ ageFrom: 12, ageTo: 16, minParticipants: 4, position: 'FW' });
   });
+
+  it('carries the source gallery in copy mode only', () => {
+    const withMedia = {
+      ...CHALLENGE,
+      media: [{ url: 'https://img/a.jpg', type: 'image' }],
+    } as unknown as Challenge;
+    expect(prefillFromChallenge(withMedia, 'copy').media).toEqual([
+      { url: 'https://img/a.jpg', type: 'image' },
+    ]);
+    expect(prefillFromChallenge(withMedia, 'edit').media).toBeUndefined();
+  });
 });

@@ -54,6 +54,8 @@ export function ChallengeCard({
       <Link href={detailHref} className="block">
         <CoverHeader
           src={challenge.mediaImageUrl}
+          media={challenge.media}
+          interactiveMedia={false}
           title={challenge.title}
           subtitle={challenge.ingress}
           priority={priority}

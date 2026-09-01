@@ -265,6 +265,7 @@ const seedChallenge = (
   ageFrom: 8,
   ageTo: 12,
   position: 'All',
+  media: [{ url: cover, type: 'image' }],
   mediaImageUrl: cover,
   participantCount: 0,
   likeCount: 0,
@@ -296,6 +297,16 @@ const CHALLENGES: ChallengeSeed[] = [
       commentCount: 15,
       ratingAverage: 4.6,
       ratingCount: 22,
+      // A real multi-item gallery so the carousel is visible in the demo.
+      media: [
+        { url: UNSPLASH('1522778119026-d647f0596c20'), type: 'image' },
+        { url: UNSPLASH('1526232761682-d26e03ac148e'), type: 'image' },
+        {
+          url: 'https://www.youtube.com/watch?v=b1Dp2Yl3ARw',
+          type: 'youtube',
+          thumbnailUrl: 'https://img.youtube.com/vi/b1Dp2Yl3ARw/hqdefault.jpg',
+        },
+      ],
     },
   ),
   seedChallenge(
@@ -315,6 +326,10 @@ const CHALLENGES: ChallengeSeed[] = [
       commentCount: 8,
       ratingAverage: 4.2,
       ratingCount: 13,
+      media: [
+        { url: UNSPLASH('1461896836934-ffe607ba8211'), type: 'image' },
+        { url: UNSPLASH('1552674605-db6ffd4facb5'), type: 'image' },
+      ],
     },
   ),
   seedChallenge(
@@ -374,8 +389,11 @@ async function seed(): Promise<void> {
       const record = existing ?? (await users.create(input));
       idByEmail[input.email] = record.id;
       // No avatar — users start empty and upload their own; clear any stale one.
+      // `displayName` is merged too so re-seeding an existing account also
+      // refreshes the name (e.g. the switch to the all-male roster).
       await db.collection('users').doc(record.id).set(
         {
+          displayName: input.displayName,
           handle: input.handle,
           avatarUrl: FieldValue.delete(),
           country: input.country,

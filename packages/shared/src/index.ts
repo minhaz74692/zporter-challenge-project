@@ -11,6 +11,7 @@
 export * from './common.js';
 export * from './auth.js';
 export * from './badge.js';
+export * from './media.js';
 export * from './team.js';
 export * from './template.js';
 export * from './challenge.js';

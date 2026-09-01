@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/util/formatters.dart';
 import '../../domain/challenge.dart';
+import 'result_video_player.dart';
 
-/// The cover photo shared by the challenge card and the detail screen.
+/// The cover media shared by the challenge card and the detail screen.
 ///
-/// On the **card** ([showMeta] true) it also carries the dark scrim, the
-/// date/time badge + optional completion check, the overflow menu and the
-/// headline + ingress. On the **detail screen** ([showMeta] false) the title
-/// lives in the app bar, so only the play button and carousel dots overlay the
-/// image.
-class ChallengeCoverHeader extends StatelessWidget {
+/// A challenge's [Challenge.galleryItems] render as a swipeable `PageView` with
+/// carousel dots. On the **card** ([showMeta] true) it also carries the dark
+/// scrim, the date/time badge + optional completion check, the overflow menu
+/// and the headline + ingress. On the **detail screen** ([showMeta] false) the
+/// title lives in the app bar, so only the media + dots show.
+class ChallengeCoverHeader extends StatefulWidget {
   const ChallengeCoverHeader({
     required this.challenge,
     this.showCheck = false,
@@ -23,18 +25,64 @@ class ChallengeCoverHeader extends StatelessWidget {
   final bool showCheck;
   final bool showMeta;
 
-  int get _mediaCount =>
-      (challenge.mediaImageUrl != null ? 1 : 0) +
-      (challenge.mediaVideoUrl != null ? 1 : 0);
+  @override
+  State<ChallengeCoverHeader> createState() => _ChallengeCoverHeaderState();
+}
+
+class _ChallengeCoverHeaderState extends State<ChallengeCoverHeader> {
+  final _controller = PageController();
+  int _index = 0;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  List<MediaItem> get _items => widget.challenge.galleryItems;
+
+  Future<void> _openVideo(MediaItem item) async {
+    if (item.type == MediaKind.youtube) {
+      await launchUrl(Uri.parse(item.url), mode: LaunchMode.externalApplication);
+      return;
+    }
+    if (!mounted) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => Scaffold(
+          backgroundColor: Colors.black,
+          appBar: AppBar(backgroundColor: Colors.black),
+          body: Center(
+            child: ResultVideoPlayer(url: item.url, fullBleed: true),
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    final items = _items;
+    final showMeta = widget.showMeta;
+
     return AspectRatio(
       aspectRatio: 16 / 9,
       child: Stack(
         fit: StackFit.expand,
         children: [
-          _CoverImage(url: challenge.mediaImageUrl),
+          if (items.isEmpty)
+            const _CoverPlaceholder()
+          else
+            PageView.builder(
+              controller: _controller,
+              onPageChanged: (i) => setState(() => _index = i),
+              itemCount: items.length,
+              itemBuilder: (context, i) => _Slide(
+                item: items[i],
+                onPlay: () => _openVideo(items[i]),
+              ),
+            ),
+
           if (showMeta)
             const DecoratedBox(
               decoration: BoxDecoration(
@@ -46,6 +94,7 @@ class ChallengeCoverHeader extends StatelessWidget {
                 ),
               ),
             ),
+
           if (showMeta)
             Positioned(
               left: 12,
@@ -53,10 +102,10 @@ class ChallengeCoverHeader extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (showCheck) const _CompletionCheck(),
-                  if (showCheck) const SizedBox(height: 10),
+                  if (widget.showCheck) const _CompletionCheck(),
+                  if (widget.showCheck) const SizedBox(height: 10),
                   Text(
-                    formatDayMonth(challenge.startAt),
+                    formatDayMonth(widget.challenge.startAt),
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 13,
@@ -64,7 +113,7 @@ class ChallengeCoverHeader extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    formatTime(challenge.startAt),
+                    formatTime(widget.challenge.startAt),
                     style: const TextStyle(
                       color: AppColors.success,
                       fontSize: 13,
@@ -74,13 +123,14 @@ class ChallengeCoverHeader extends StatelessWidget {
                 ],
               ),
             ),
+
           if (showMeta)
             const Positioned(
               right: 6,
               top: 8,
               child: Icon(Icons.more_vert, color: Colors.white, size: 22),
             ),
-          if (challenge.mediaVideoUrl != null) const Center(child: _PlayButton()),
+
           if (showMeta)
             Positioned(
               left: 16,
@@ -91,7 +141,7 @@ class ChallengeCoverHeader extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    challenge.title,
+                    widget.challenge.title,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
@@ -101,31 +151,56 @@ class ChallengeCoverHeader extends StatelessWidget {
                       height: 1.15,
                     ),
                   ),
-                  if (challenge.ingress != null &&
-                      challenge.ingress!.isNotEmpty) ...[
+                  if (widget.challenge.ingress != null &&
+                      widget.challenge.ingress!.isNotEmpty) ...[
                     const SizedBox(height: 2),
                     Text(
-                      challenge.ingress!,
+                      widget.challenge.ingress!,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style:
-                          const TextStyle(color: Colors.white70, fontSize: 13),
+                      style: const TextStyle(color: Colors.white70, fontSize: 13),
                     ),
                   ],
-                  if (_mediaCount >= 2) ...[
+                  if (items.length >= 2) ...[
                     const SizedBox(height: 10),
-                    Center(child: _CarouselDots(count: _mediaCount)),
+                    Center(child: _CarouselDots(count: items.length, active: _index)),
                   ],
                 ],
               ),
             ),
-          if (!showMeta && _mediaCount >= 2)
+
+          if (!showMeta && items.length >= 2)
             Positioned(
               left: 0,
               right: 0,
               bottom: 12,
-              child: Center(child: _CarouselDots(count: _mediaCount)),
+              child: Center(child: _CarouselDots(count: items.length, active: _index)),
             ),
+        ],
+      ),
+    );
+  }
+}
+
+/// One media slide: an image, or a poster + play button for a video / YouTube.
+class _Slide extends StatelessWidget {
+  const _Slide({required this.item, required this.onPlay});
+
+  final MediaItem item;
+  final VoidCallback onPlay;
+
+  @override
+  Widget build(BuildContext context) {
+    if (item.type == MediaKind.image) {
+      return _CoverImage(url: item.url);
+    }
+    return GestureDetector(
+      onTap: onPlay,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          _CoverImage(url: item.resolvedThumbnail),
+          const Center(child: _PlayButton()),
         ],
       ),
     );
@@ -139,7 +214,7 @@ class _CoverImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (url == null) return const _CoverPlaceholder();
+    if (url == null || url!.isEmpty) return const _CoverPlaceholder();
     return Image.network(
       url!,
       fit: BoxFit.cover,
@@ -194,13 +269,10 @@ class _PlayButton extends StatelessWidget {
 }
 
 class _CarouselDots extends StatelessWidget {
-  const _CarouselDots({required this.count});
+  const _CarouselDots({required this.count, required this.active});
 
   final int count;
-
-  /// The image is always slide 0; if a video exists it's slide 1 and shown as
-  /// active to hint "there's more here".
-  int get active => count - 1;
+  final int active;
 
   @override
   Widget build(BuildContext context) => Row(

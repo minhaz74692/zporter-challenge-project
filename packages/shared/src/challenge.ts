@@ -10,6 +10,7 @@ import type {
 } from './common.js';
 import type { UserSummary } from './auth.js';
 import type { Badge } from './badge.js';
+import type { MediaItem } from './media.js';
 import type { LeaderboardEntry } from './result.js';
 import type { ParticipantSummary } from './participant.js';
 
@@ -51,7 +52,11 @@ export interface Challenge {
   ageTo?: number;
   /** Target playing position, e.g. `Forwards`, `All`. */
   position?: string;
+  /** Ordered media gallery (images / videos / YouTube links); server-maintained. */
+  media: MediaItem[];
+  /** Derived from `media`: URL of the first `image` item. */
   mediaImageUrl?: string;
+  /** Derived from `media`: URL of the first `video` item. */
   mediaVideoUrl?: string;
   ratingAverage?: number;
   ratingCount?: number;

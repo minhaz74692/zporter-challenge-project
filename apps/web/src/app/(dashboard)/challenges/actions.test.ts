@@ -27,9 +27,12 @@ vi.mock('next/navigation', () => ({ redirect: h.redirect }));
 vi.mock('next/cache', () => ({ revalidatePath: h.revalidatePath }));
 
 import {
+  addChallengeMedia,
   createChallenge,
   deleteChallenge,
   invitePlayers,
+  removeChallengeMedia,
+  reorderChallengeMedia,
   updateChallenge,
   uploadCover,
 } from './actions';
@@ -228,6 +231,99 @@ describe('uploadCover', () => {
     const file = new File([new Uint8Array([1])], 'c.png', { type: 'image/png' });
     expect(await uploadCover('c-7', {}, coverForm(file))).toEqual({
       error: 'Unsupported media type',
+    });
+  });
+});
+
+describe('media on create / update', () => {
+  const png = () => new File([new Uint8Array([1, 2, 3])], 'a.png', { type: 'image/png' });
+
+  it('createChallenge uploads files + youtube links to /media after the challenge exists', async () => {
+    apiMock.mockResolvedValue({ id: 'c-new' });
+    const fd = challengeForm();
+    fd.append('mediaFiles', png());
+    fd.append('youtubeLinks', 'https://youtu.be/b1Dp2Yl3ARw');
+    fd.append('youtubeLinks', '  ');
+
+    await expect(createChallenge({}, fd)).rejects.toThrow('REDIRECT:/challenges/c-new');
+
+    expect(apiMock.mock.calls[0][0]).toBe('/challenges');
+    const [mediaPath, mediaOpts] = apiMock.mock.calls[1];
+    expect(mediaPath).toBe('/challenges/c-new/media');
+    expect(mediaOpts.body).toBeInstanceOf(FormData);
+    expect((mediaOpts.body as FormData).getAll('files')).toHaveLength(1);
+    expect((mediaOpts.body as FormData).getAll('youtubeLinks')).toEqual([
+      'https://youtu.be/b1Dp2Yl3ARw',
+    ]);
+  });
+
+  it('createChallenge re-sends a copied gallery as JSON via mediaJson', async () => {
+    apiMock.mockResolvedValue({ id: 'c-new' });
+    const fd = challengeForm();
+    fd.append('mediaJson', JSON.stringify([{ url: 'u', type: 'image' }]));
+
+    await expect(createChallenge({}, fd)).rejects.toThrow();
+    const [path, opts] = apiMock.mock.calls[1];
+    expect(path).toBe('/challenges/c-new/media');
+    expect(opts.method).toBe('PUT');
+    expect(opts.body).toEqual({ items: [{ url: 'u', type: 'image' }] });
+  });
+
+  it('createChallenge still redirects (with ?media=failed) when the upload fails', async () => {
+    apiMock.mockImplementation((path: string) => {
+      if (path === '/challenges') return Promise.resolve({ id: 'c-new' });
+      return Promise.reject(new Error('storage down'));
+    });
+    const fd = challengeForm();
+    fd.append('mediaFiles', png());
+    await expect(createChallenge({}, fd)).rejects.toThrow('REDIRECT:/challenges/c-new?media=failed');
+  });
+
+  it('does not call /media when the form carries no media', async () => {
+    apiMock.mockResolvedValue({ id: 'c-new' });
+    await expect(createChallenge({}, challengeForm())).rejects.toThrow('REDIRECT:/challenges/c-new');
+    expect(apiMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('detail-page media actions', () => {
+  it('addChallengeMedia forwards files + links as multipart', async () => {
+    apiMock.mockResolvedValue({ id: 'c-7' });
+    const fd = new FormData();
+    fd.append('mediaFiles', new File([new Uint8Array([1])], 'a.png', { type: 'image/png' }));
+    fd.append('youtubeLinks', 'https://youtu.be/b1Dp2Yl3ARw');
+
+    expect(await addChallengeMedia('c-7', {}, fd)).toEqual({ ok: true });
+    const [path, opts] = apiMock.mock.calls[0];
+    expect(path).toBe('/challenges/c-7/media');
+    expect(opts.body).toBeInstanceOf(FormData);
+    expect(revalidatePath).toHaveBeenCalledWith('/challenges/c-7');
+  });
+
+  it('addChallengeMedia rejects an empty submission', async () => {
+    expect(await addChallengeMedia('c-7', {}, new FormData())).toEqual({
+      error: 'Choose a file or paste a YouTube link.',
+    });
+    expect(apiMock).not.toHaveBeenCalled();
+  });
+
+  it('removeChallengeMedia DELETEs by index and revalidates', async () => {
+    apiMock.mockResolvedValue({});
+    await removeChallengeMedia('c-7', 2);
+    expect(apiMock).toHaveBeenCalledWith('/challenges/c-7/media/2', { method: 'DELETE' });
+    expect(revalidatePath).toHaveBeenCalledWith('/challenges/c-7');
+  });
+
+  it('reorderChallengeMedia PUTs the new item order', async () => {
+    apiMock.mockResolvedValue({});
+    const items = [
+      { url: 'b', type: 'image' as const },
+      { url: 'a', type: 'youtube' as const },
+    ];
+    await reorderChallengeMedia('c-7', items);
+    expect(apiMock).toHaveBeenCalledWith('/challenges/c-7/media', {
+      method: 'PUT',
+      body: { items },
     });
   });
 });

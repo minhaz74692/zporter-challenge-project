@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_routes.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/section_tab_bar.dart';
 import '../../notifications/application/notifications_provider.dart';
 import '../domain/challenge_enums.dart';
 import 'widgets/app_drawer.dart';
@@ -35,11 +36,8 @@ class ChallengesScreen extends StatelessWidget {
             // Trails the last icon to a 16px inset from the screen edge.
             const SizedBox(width: 10),
           ],
-          bottom: TabBar(
-            // Colours + label style come from AppTheme's tabBarTheme.
-            isScrollable: true,
-            tabAlignment: TabAlignment.start,
-            tabs: [for (final c in _tabs) Tab(text: c.label)],
+          bottom: SectionTabBar(
+            labels: [for (final c in _tabs) c.label],
           ),
         ),
         body: Column(

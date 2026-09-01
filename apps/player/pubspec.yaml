@@ -35,6 +35,9 @@ dependencies:
   # Inline playback of a reported result video (controller review + report tab)
   video_player: ^2.9.2
 
+  # Open a challenge's YouTube media item in the browser / YouTube app
+  url_launcher: ^6.3.1
+
   # Push notifications (FCM). Firestore/Storage are still API-only; receiving
   # push necessarily needs the messaging SDK on-device.
   firebase_core: ^3.8.0

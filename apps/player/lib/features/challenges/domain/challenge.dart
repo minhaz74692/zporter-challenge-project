@@ -33,6 +33,57 @@ class CreatorSummary extends Equatable {
   List<Object?> get props => [id, displayName, handle, avatarUrl, club, position];
 }
 
+/// Kind of a media-gallery item. `youtube` carries the watch URL + a thumbnail.
+enum MediaKind {
+  image('image'),
+  video('video'),
+  youtube('youtube');
+
+  const MediaKind(this.apiValue);
+  final String apiValue;
+
+  static MediaKind fromApi(String? value) => values.firstWhere(
+    (e) => e.apiValue == value,
+    orElse: () => MediaKind.image,
+  );
+}
+
+/// One item in a challenge's ordered media gallery.
+class MediaItem extends Equatable {
+  const MediaItem({required this.url, required this.type, this.thumbnailUrl});
+
+  final String url;
+  final MediaKind type;
+  final String? thumbnailUrl;
+
+  /// A YouTube watch URL → an `img.youtube.com` still, used when the API didn't
+  /// send one.
+  String? get resolvedThumbnail {
+    if (thumbnailUrl != null && thumbnailUrl!.isNotEmpty) return thumbnailUrl;
+    if (type != MediaKind.youtube) return null;
+    final id = _youtubeId(url);
+    return id == null ? null : 'https://img.youtube.com/vi/$id/hqdefault.jpg';
+  }
+
+  static String? _youtubeId(String url) {
+    final uri = Uri.tryParse(url);
+    if (uri == null) return null;
+    final v = uri.queryParameters['v'];
+    if (v != null && v.length == 11) return v;
+    final last = uri.pathSegments.isEmpty ? null : uri.pathSegments.last;
+    return (last != null && last.length == 11) ? last : null;
+  }
+
+  factory MediaItem.fromJson(Map<String, dynamic> json) => MediaItem(
+    url: json['url'] as String? ?? '',
+    type: MediaKind.fromApi(json['type'] as String?),
+    thumbnailUrl: json['thumbnailUrl'] as String?,
+  );
+
+  @override
+  List<Object?> get props => [url, type, thumbnailUrl];
+}
+
 /// A live challenge instance. Field set mirrors `GET /challenges` list rows;
 /// the extra detail payload lives on [ChallengeDetail].
 class Challenge extends Equatable {
@@ -59,6 +110,7 @@ class Challenge extends Equatable {
     this.ageFrom,
     this.ageTo,
     this.position,
+    this.media = const [],
     this.mediaImageUrl,
     this.mediaVideoUrl,
     this.ratingAverage,
@@ -103,6 +155,10 @@ class Challenge extends Equatable {
 
   /// Target playing position, e.g. `Forwards`, `All`.
   final String? position;
+
+  /// Ordered media gallery. Empty for challenges created before the gallery
+  /// existed — use [galleryItems], which falls back to the legacy fields.
+  final List<MediaItem> media;
   final String? mediaImageUrl;
   final String? mediaVideoUrl;
   final double? ratingAverage;
@@ -118,6 +174,18 @@ class Challenge extends Equatable {
   /// [status], this is the lazy client-side equivalent for freshly loaded data.
   bool get hasEnded =>
       status == ChallengeStatus.ended || DateTime.now().isAfter(deadline);
+
+  /// The gallery to render: [media] when present, else a synthesised list from
+  /// the legacy `mediaImageUrl` / `mediaVideoUrl` fields.
+  List<MediaItem> get galleryItems {
+    if (media.isNotEmpty) return media;
+    return [
+      if (mediaImageUrl != null && mediaImageUrl!.isNotEmpty)
+        MediaItem(url: mediaImageUrl!, type: MediaKind.image),
+      if (mediaVideoUrl != null && mediaVideoUrl!.isNotEmpty)
+        MediaItem(url: mediaVideoUrl!, type: MediaKind.video),
+    ];
+  }
 
   factory Challenge.fromJson(Map<String, dynamic> json) => Challenge(
     id: json['id'] as String,
@@ -142,6 +210,10 @@ class Challenge extends Equatable {
     ageFrom: (json['ageFrom'] as num?)?.toInt(),
     ageTo: (json['ageTo'] as num?)?.toInt(),
     position: json['position'] as String?,
+    media: (json['media'] as List?)
+            ?.map((e) => MediaItem.fromJson(e as Map<String, dynamic>))
+            .toList(growable: false) ??
+        const [],
     mediaImageUrl: json['mediaImageUrl'] as String?,
     mediaVideoUrl: json['mediaVideoUrl'] as String?,
     ratingAverage: (json['ratingAverage'] as num?)?.toDouble(),
@@ -182,6 +254,7 @@ class Challenge extends Equatable {
     ageFrom,
     ageTo,
     position,
+    media,
     mediaImageUrl,
     mediaVideoUrl,
     ratingAverage,

@@ -20,6 +20,9 @@ export type ResultType = 'count' | 'time' | 'boolean' | 'score' | 'text' | 'proo
 
 export type ScoringDirection = 'higher_better' | 'lower_better';
 
+/** A challenge media-gallery item. `youtube` stores the watch URL + a thumbnail. */
+export type MediaKind = 'image' | 'video' | 'youtube';
+
 export type ChallengeStatus = 'draft' | 'active' | 'ended';
 
 /**

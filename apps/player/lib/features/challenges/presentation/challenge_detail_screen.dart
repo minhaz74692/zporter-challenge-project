@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/async_view.dart';
+import '../../../core/widgets/section_tab_bar.dart';
 import '../application/challenge_detail_provider.dart';
 import '../domain/challenge_detail.dart';
 import '../domain/challenge_enums.dart';
@@ -56,12 +57,7 @@ class ChallengeDetailScreen extends ConsumerWidget {
             Icon(Icons.ios_share_rounded, color: AppColors.fg, size: 22),
             SizedBox(width: 16),
           ],
-          bottom: TabBar(
-            // Colours + label style come from AppTheme's tabBarTheme.
-            isScrollable: true,
-            tabAlignment: TabAlignment.start,
-            tabs: [for (final label in tabLabels) Tab(text: label)],
-          ),
+          bottom: SectionTabBar(labels: tabLabels),
         ),
         body: AsyncView<ChallengeDetail>(
           value: value,

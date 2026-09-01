@@ -12,7 +12,8 @@ import type {
 import { cn } from '@/components/ui/cn';
 import { Pill } from '@/components/ui/pill';
 import { deleteChallenge } from '../actions';
-import { CoverUpload } from '@/components/challenges/cover-upload';
+import { CoverHeader } from '@/components/challenges/cover-header';
+import { MediaManager } from '@/components/challenges/media-manager';
 import { InvitePanel } from '@/components/challenges/invite-panel';
 import { RichDescription } from '@/components/challenges/rich-description';
 import { LeaderboardBoard } from '@/components/challenges/leaderboard-board';
@@ -75,7 +76,15 @@ export function ChallengeDetailView({
     new Date(d).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 
   return (
-    <div className="rounded-[var(--radius-panel)] border border-border bg-surface p-6 sm:p-8">
+    <div className="overflow-hidden rounded-[var(--radius-panel)] border border-border bg-surface">
+      {challenge.media?.length ? (
+        <CoverHeader
+          src={challenge.mediaImageUrl}
+          media={challenge.media}
+          className="rounded-none"
+        />
+      ) : null}
+      <div className="p-6 sm:p-8">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-[18px] font-semibold text-fg">{challenge.title}</h1>
@@ -131,9 +140,9 @@ export function ChallengeDetailView({
 
           <div className="mt-5 border-t border-border-soft pt-4">
             <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-faint">
-              Cover image
+              Media gallery
             </p>
-            <CoverUpload challengeId={challenge.id} current={challenge.mediaImageUrl} />
+            <MediaManager challengeId={challenge.id} media={challenge.media} />
           </div>
         </>
       )}
@@ -230,6 +239,7 @@ export function ChallengeDetailView({
           />
         </div>
       )}
+      </div>
     </div>
   );
 }
