@@ -7,6 +7,8 @@ import '../../../core/router/app_routes.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../application/auth_notifier.dart';
+import '../data/auth_providers.dart';
+import '../domain/team_option.dart';
 import 'widgets/auth_scaffold.dart';
 
 class SignupScreen extends ConsumerStatefulWidget {
@@ -21,6 +23,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   final _name = TextEditingController();
   final _email = TextEditingController();
   final _password = TextEditingController();
+  String? _teamId;
 
   @override
   void dispose() {
@@ -36,6 +39,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         displayName: _name.text.trim(),
         email: _email.text.trim(),
         password: _password.text,
+        teamId: _teamId!,
       );
     }
   }
@@ -52,10 +56,11 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     });
 
     final isBusy = ref.watch(authNotifierProvider).isLoading;
+    final teams = ref.watch(teamsProvider);
 
     return AuthScaffold(
       title: 'Create your account',
-      subtitle: 'Join a challenge and start competing.',
+      subtitle: 'Join your team and start competing.',
       footer: TextButton(
         onPressed: isBusy ? null : () => context.go(AppRoutes.login),
         child: const Text('Already have an account? Sign in'),
@@ -94,6 +99,13 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                     ? 'At least 8 characters'
                     : null,
               ),
+              const SizedBox(height: AppSpacing.md),
+              _TeamField(
+                teams: teams,
+                value: _teamId,
+                onChanged: (id) => setState(() => _teamId = id),
+                onRetry: () => ref.invalidate(teamsProvider),
+              ),
               const SizedBox(height: AppSpacing.xl),
               PrimaryButton(
                 label: 'Create account',
@@ -104,6 +116,71 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Team picker for signup — a dropdown once the directory loads, with inline
+/// spinner / retry while it is pending or failed.
+class _TeamField extends StatelessWidget {
+  const _TeamField({
+    required this.teams,
+    required this.value,
+    required this.onChanged,
+    required this.onRetry,
+  });
+
+  final AsyncValue<List<TeamOption>> teams;
+  final String? value;
+  final ValueChanged<String?> onChanged;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return teams.when(
+      loading: () => const InputDecorator(
+        decoration: InputDecoration(hintText: 'Team'),
+        child: Row(
+          children: [
+            SizedBox(
+              height: 16,
+              width: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            SizedBox(width: AppSpacing.sm),
+            Text('Loading teams…'),
+          ],
+        ),
+      ),
+      error: (_, __) => InputDecorator(
+        decoration: const InputDecoration(hintText: 'Team'),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Flexible(child: Text('Could not load teams')),
+            TextButton(onPressed: onRetry, child: const Text('Retry')),
+          ],
+        ),
+      ),
+      data: (list) => DropdownButtonFormField<String>(
+        initialValue: value,
+        isExpanded: true,
+        decoration: const InputDecoration(hintText: 'Select your team'),
+        items: [
+          for (final team in list)
+            DropdownMenuItem<String>(
+              value: team.id,
+              child: Text(
+                team.coachName.isEmpty
+                    ? team.name
+                    : '${team.name}  ·  ${team.coachName}',
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+        ],
+        onChanged: onChanged,
+        validator: (v) => (v == null || v.isEmpty) ? 'Choose your team' : null,
+      ),
     );
   }
 }

@@ -17,6 +17,7 @@ export function participantFromDoc(snap: DocumentSnapshot<DocumentData>): Partic
     resultState: data.resultState,
     submittedResult: data.submittedResult,
     rank: data.rank,
+    awardedBadge: data.awardedBadge,
     joinedAt: data.joinedAt,
     respondedAt: data.respondedAt,
   };

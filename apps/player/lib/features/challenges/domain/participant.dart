@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 
+import 'badge.dart';
 import 'challenge_enums.dart';
 
 /// A result a player has reported (Figma "Add result" form).
@@ -15,6 +16,7 @@ class SubmittedResult extends Equatable {
     required this.submittedAt,
     this.verified,
     this.verifiedAt,
+    this.shareToFeed = false,
   });
 
   /// Raw value: `num` for count/time/score, `bool` for boolean, `String` for text.
@@ -34,6 +36,9 @@ class SubmittedResult extends Equatable {
   final bool? verified;
   final DateTime? verifiedAt;
 
+  /// "Share to my feed" concept toggle — no feed pipeline yet (next step).
+  final bool shareToFeed;
+
   bool get isReviewed => verified != null;
 
   factory SubmittedResult.fromJson(Map<String, dynamic> json) => SubmittedResult(
@@ -49,6 +54,7 @@ class SubmittedResult extends Equatable {
     verifiedAt: json['verifiedAt'] == null
         ? null
         : DateTime.parse(json['verifiedAt'] as String),
+    shareToFeed: json['shareToFeed'] as bool? ?? false,
   );
 
   @override
@@ -63,6 +69,7 @@ class SubmittedResult extends Equatable {
     submittedAt,
     verified,
     verifiedAt,
+    shareToFeed,
   ];
 }
 
@@ -80,6 +87,7 @@ class Participant extends Equatable {
     required this.resultState,
     this.submittedResult,
     this.rank,
+    this.awardedBadge,
     required this.joinedAt,
     this.respondedAt,
   });
@@ -94,6 +102,9 @@ class Participant extends Equatable {
   final ResultState resultState;
   final SubmittedResult? submittedResult;
   final int? rank;
+
+  /// Recognition badge earned when the controller verified this result.
+  final Badge? awardedBadge;
   final DateTime joinedAt;
   final DateTime? respondedAt;
 
@@ -110,6 +121,9 @@ class Participant extends Equatable {
         ? null
         : SubmittedResult.fromJson(json['submittedResult'] as Map<String, dynamic>),
     rank: (json['rank'] as num?)?.toInt(),
+    awardedBadge: json['awardedBadge'] == null
+        ? null
+        : Badge.fromJson(json['awardedBadge'] as Map<String, dynamic>),
     joinedAt: DateTime.parse(json['joinedAt'] as String),
     respondedAt: json['respondedAt'] == null
         ? null
@@ -128,6 +142,7 @@ class Participant extends Equatable {
     resultState,
     submittedResult,
     rank,
+    awardedBadge,
     joinedAt,
     respondedAt,
   ];
@@ -140,12 +155,16 @@ class ParticipantSummary extends Equatable {
     required this.resultState,
     this.rank,
     this.submittedResult,
+    this.awardedBadge,
   });
 
   final InviteState inviteState;
   final ResultState resultState;
   final int? rank;
   final SubmittedResult? submittedResult;
+
+  /// Recognition badge earned once the caller's result is verified.
+  final Badge? awardedBadge;
 
   bool get hasAccepted => inviteState == InviteState.accepted;
   bool get hasDeclined => inviteState == InviteState.declined;
@@ -158,6 +177,9 @@ class ParticipantSummary extends Equatable {
     submittedResult: json['submittedResult'] == null
         ? null
         : SubmittedResult.fromJson(json['submittedResult'] as Map<String, dynamic>),
+    awardedBadge: json['awardedBadge'] == null
+        ? null
+        : Badge.fromJson(json['awardedBadge'] as Map<String, dynamic>),
   );
 
   ParticipantSummary copyWith({
@@ -168,8 +190,15 @@ class ParticipantSummary extends Equatable {
     resultState: resultState ?? this.resultState,
     rank: rank,
     submittedResult: submittedResult,
+    awardedBadge: awardedBadge,
   );
 
   @override
-  List<Object?> get props => [inviteState, resultState, rank, submittedResult];
+  List<Object?> get props => [
+    inviteState,
+    resultState,
+    rank,
+    submittedResult,
+    awardedBadge,
+  ];
 }

@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 
+import 'badge.dart';
 import 'challenge.dart';
 import 'leaderboard_entry.dart';
 import 'participant.dart';
@@ -11,11 +12,16 @@ class ChallengeDetail extends Equatable {
     required this.challenge,
     this.viewerParticipant,
     this.leaderboardPreview = const [],
+    this.rewardBadge,
   });
 
   final Challenge challenge;
   final ParticipantSummary? viewerParticipant;
   final List<LeaderboardEntry> leaderboardPreview;
+
+  /// The recognition badge granted on a verified result, resolved from
+  /// `rewardBadgeId` so the screen can show the reward before it is earned.
+  final Badge? rewardBadge;
 
   factory ChallengeDetail.fromJson(Map<String, dynamic> json) => ChallengeDetail(
     challenge: Challenge.fromJson(json),
@@ -28,6 +34,9 @@ class ChallengeDetail extends Equatable {
             ?.map((e) => LeaderboardEntry.fromJson(e as Map<String, dynamic>))
             .toList(growable: false) ??
         const [],
+    rewardBadge: json['rewardBadge'] == null
+        ? null
+        : Badge.fromJson(json['rewardBadge'] as Map<String, dynamic>),
   );
 
   ChallengeDetail copyWith({
@@ -38,8 +47,14 @@ class ChallengeDetail extends Equatable {
     viewerParticipant:
         clearViewerParticipant ? null : (viewerParticipant ?? this.viewerParticipant),
     leaderboardPreview: leaderboardPreview,
+    rewardBadge: rewardBadge,
   );
 
   @override
-  List<Object?> get props => [challenge, viewerParticipant, leaderboardPreview];
+  List<Object?> get props => [
+    challenge,
+    viewerParticipant,
+    leaderboardPreview,
+    rewardBadge,
+  ];
 }

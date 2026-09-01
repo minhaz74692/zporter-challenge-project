@@ -70,6 +70,22 @@ void main() {
     expect(container.read(authNotifierProvider).value?.displayName, 'Logged In');
   });
 
+  test('register forwards the chosen team and moves state to the user', () async {
+    repo.signupResult = buildUser(displayName: 'New Player');
+    final container = makeContainer();
+    await container.read(authNotifierProvider.future);
+
+    await container.read(authNotifierProvider.notifier).register(
+      email: 'new@zporter.test',
+      password: 'password123#',
+      displayName: 'New Player',
+      teamId: 'team-maj-fc',
+    );
+
+    expect(repo.lastSignupTeamId, 'team-maj-fc');
+    expect(container.read(authNotifierProvider).value?.displayName, 'New Player');
+  });
+
   test('login failure surfaces as AsyncError(ApiException), stays signed out', () async {
     repo.loginError = const ApiException(statusCode: 401, message: 'Bad credentials');
     final container = makeContainer();

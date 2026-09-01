@@ -110,6 +110,26 @@ void main() {
     expect(challenges.verified, [('c1', 'u_priya', true)]);
   });
 
+  testWidgets('reminder and badge-earned rows get their own leading icons', (
+    tester,
+  ) async {
+    await pump(tester, [
+      buildNotification(
+        id: 'rem',
+        type: AppNotificationType.challengeReminder,
+        title: '"Sprint" closes in 48h',
+      ),
+      buildNotification(
+        id: 'badge',
+        type: AppNotificationType.badgeEarned,
+        title: 'You earned the Sharp Shooter badge 🎉',
+      ),
+    ]);
+
+    expect(find.byIcon(Icons.alarm_rounded), findsOneWidget);
+    expect(find.byIcon(Icons.workspace_premium_rounded), findsOneWidget);
+  });
+
   testWidgets('empty state', (tester) async {
     await pump(tester, const []);
     expect(find.text('No notifications yet.'), findsOneWidget);

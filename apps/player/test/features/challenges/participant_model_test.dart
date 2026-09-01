@@ -55,6 +55,30 @@ void main() {
     expect(r.unit, ResultUnit.reps);
     expect(r.arena, 'Camp Nou');
     expect(r.note, isNull);
+    expect(r.shareToFeed, isFalse);
+  });
+
+  test('SubmittedResult.fromJson reads shareToFeed when present', () {
+    final r = SubmittedResult.fromJson({...submittedJson(), 'shareToFeed': true});
+    expect(r.shareToFeed, isTrue);
+  });
+
+  test('Participant.fromJson parses the awarded badge when present', () {
+    final p = Participant.fromJson({
+      'userId': 'u1',
+      'displayName': 'Neo',
+      'inviteState': 'accepted',
+      'resultState': 'completed',
+      'joinedAt': '2026-01-01T00:00:00.000Z',
+      'awardedBadge': {
+        'id': 'sharp-shooter',
+        'name': 'Sharp Shooter',
+        'icon': '🎯',
+        'description': 'Nailed it',
+      },
+    });
+    expect(p.awardedBadge?.name, 'Sharp Shooter');
+    expect(p.awardedBadge?.icon, '🎯');
   });
 
   group('ParticipantSummary', () {

@@ -30,5 +30,11 @@ export function notificationCopy(
       return { title: `${who} asks you to verify a result`, body: quoted };
     case 'result_verified':
       return { title: 'Your result was verified', body: quoted };
+    case 'badge_earned':
+      // `actorName` carries the badge name here.
+      return {
+        title: `You earned the ${actorName ?? 'challenge'} badge 🎉`,
+        body: `For your verified result in ${quoted}`,
+      };
   }
 }

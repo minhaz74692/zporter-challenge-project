@@ -1,7 +1,8 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Badge;
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/util/formatters.dart';
+import '../../domain/badge.dart';
 import '../../domain/participant.dart';
 import 'result_video_player.dart';
 
@@ -12,6 +13,7 @@ class ResultSummaryCard extends StatelessWidget {
   const ResultSummaryCard({
     required this.result,
     this.rank,
+    this.badge,
     this.submitterName,
     this.title = 'Result reported',
     super.key,
@@ -19,6 +21,10 @@ class ResultSummaryCard extends StatelessWidget {
 
   final SubmittedResult result;
   final int? rank;
+
+  /// Recognition badge earned once the result is verified — shows a celebratory
+  /// header + an "Earned …" chip when set.
+  final Badge? badge;
 
   /// Whose result this is — shown only when reviewing someone else's.
   final String? submitterName;
@@ -33,6 +39,7 @@ class ResultSummaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasVideo = result.videoUrl.isNotEmpty;
+    final heading = badge != null ? 'Challenge completed 🎉' : title;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -45,15 +52,16 @@ class ResultSummaryCard extends StatelessWidget {
               size: 22,
             ),
             const SizedBox(width: 8),
-            Text(
-              title,
-              style: const TextStyle(
-                color: AppColors.fg,
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
+            Expanded(
+              child: Text(
+                heading,
+                style: const TextStyle(
+                  color: AppColors.fg,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
-            const Spacer(),
             if (rank != null)
               Text(
                 '#$rank',
@@ -65,6 +73,10 @@ class ResultSummaryCard extends StatelessWidget {
               ),
           ],
         ),
+        if (badge != null) ...[
+          const SizedBox(height: 10),
+          _BadgeChip(badge: badge!),
+        ],
         if (submitterName != null) ...[
           const SizedBox(height: 4),
           Text(
@@ -92,6 +104,8 @@ class ResultSummaryCard extends StatelessWidget {
         _Line(label: 'Controller', value: result.controllerRef),
         if (result.note != null && result.note!.isNotEmpty)
           _Line(label: 'Note', value: result.note!),
+        if (result.shareToFeed)
+          const _Line(label: 'Feed', value: 'Shared to your feed'),
         const SizedBox(height: 16),
         if (hasVideo)
           ResultVideoPlayer(url: result.videoUrl, fullBleed: true)
@@ -103,6 +117,39 @@ class ResultSummaryCard extends StatelessWidget {
           style: const TextStyle(color: AppColors.faint, fontSize: 12),
         ),
       ],
+    );
+  }
+}
+
+/// Recognition badge earned on a verified result.
+class _BadgeChip extends StatelessWidget {
+  const _BadgeChip({required this.badge});
+
+  final Badge badge;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppColors.success.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(badge.icon, style: const TextStyle(fontSize: 14)),
+          const SizedBox(width: 6),
+          Text(
+            'Earned ${badge.name}',
+            style: const TextStyle(
+              color: AppColors.success,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

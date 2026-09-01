@@ -28,16 +28,25 @@ abstract final class AppTheme {
       canvasColor: AppColors.canvas,
       textTheme: AppTypography.textTheme(base.textTheme),
       dividerColor: AppColors.border,
-      appBarTheme: const AppBarTheme(
+      appBarTheme: AppBarTheme(
         backgroundColor: AppColors.bg,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         centerTitle: false,
+        titleTextStyle: AppTypography.appBarTitle,
+        iconTheme: const IconThemeData(color: AppColors.fgStrong, size: 24),
+        actionsIconTheme: const IconThemeData(color: AppColors.fgStrong, size: 24),
       ),
-      // Kill the Material 3 hairline under the TabBar.
-      tabBarTheme: const TabBarThemeData(
-        dividerColor: Colors.transparent,
+      // Category tabs — Figma "Text Tab" (one definition, every TabBar).
+      tabBarTheme: TabBarThemeData(
+        dividerColor: Colors.transparent, // kill the M3 hairline
         dividerHeight: 0,
+        labelColor: AppColors.tabActive,
+        unselectedLabelColor: AppColors.tabInactive,
+        labelStyle: AppTypography.tabLabel,
+        unselectedLabelStyle: AppTypography.tabLabel,
+        indicatorColor: AppColors.tabActive,
+        indicatorSize: TabBarIndicatorSize.label,
       ),
       cardTheme: CardThemeData(
         color: AppColors.surface,

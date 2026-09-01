@@ -9,6 +9,7 @@ import type {
   ScoringDirection,
 } from './common.js';
 import type { UserSummary } from './auth.js';
+import type { Badge } from './badge.js';
 import type { LeaderboardEntry } from './result.js';
 import type { ParticipantSummary } from './participant.js';
 
@@ -117,4 +118,6 @@ export interface InviteRequest {
 export interface ChallengeDetail extends Challenge {
   viewerParticipant?: ParticipantSummary;
   leaderboardPreview: LeaderboardEntry[];
+  /** Resolved from `rewardBadgeId` so the detail screen can show the reward. */
+  rewardBadge?: Badge;
 }

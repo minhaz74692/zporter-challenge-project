@@ -28,6 +28,16 @@ export interface SignupRequest {
   password: string;
   displayName: string;
   role: UserRole;
+  /**
+   * Coach signup = team account: the squad created and owned by the new coach.
+   * Required when `role` is `coach`, ignored otherwise.
+   */
+  teamName?: string;
+  /**
+   * Player signup joins an existing squad (from `GET /teams/directory`).
+   * Required when `role` is `player`, ignored otherwise.
+   */
+  teamId?: string;
 }
 
 export interface LoginRequest {

@@ -57,14 +57,9 @@ class ChallengeDetailScreen extends ConsumerWidget {
             SizedBox(width: 16),
           ],
           bottom: TabBar(
+            // Colours + label style come from AppTheme's tabBarTheme.
             isScrollable: true,
             tabAlignment: TabAlignment.start,
-            indicatorColor: AppColors.accent,
-            indicatorSize: TabBarIndicatorSize.label,
-            labelColor: AppColors.accent,
-            unselectedLabelColor: AppColors.muted,
-            labelStyle:
-                const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
             tabs: [for (final label in tabLabels) Tab(text: label)],
           ),
         ),

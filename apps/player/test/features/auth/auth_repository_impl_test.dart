@@ -38,7 +38,7 @@ void main() {
     expect(ctx.storage.refresh, 'refresh-1');
   });
 
-  test('signup sends role=player', () async {
+  test('signup sends role=player and the chosen teamId', () async {
     Map<String, dynamic>? sentBody;
     final ctx = build((options) async {
       sentBody = options.data as Map<String, dynamic>;
@@ -49,9 +49,28 @@ void main() {
       email: 'new@zporter.test',
       password: 'password123#',
       displayName: 'New Player',
+      teamId: 'team-maj-fc',
     );
 
     expect(sentBody?['role'], 'player');
+    expect(sentBody?['teamId'], 'team-maj-fc');
+  });
+
+  test('fetchTeams maps the public directory response', () async {
+    final ctx = build((options) async {
+      expect(options.path, contains('/teams/directory'));
+      return jsonResponse([
+        {'id': 't1', 'name': 'Maj FC', 'coachName': 'Carl Carter'},
+        {'id': 't2', 'name': 'Ope IF', 'coachName': 'Erik Ericsson'},
+      ], 200);
+    });
+
+    final teams = await ctx.repo.fetchTeams();
+
+    expect(teams, hasLength(2));
+    expect(teams.first.id, 't1');
+    expect(teams.first.name, 'Maj FC');
+    expect(teams.first.coachName, 'Carl Carter');
   });
 
   test('a 400 becomes an ApiException carrying the API message', () async {

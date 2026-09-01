@@ -13,6 +13,11 @@ export interface SubmitResultRequest {
   /** Handle of the witness verifying the result — required. */
   controllerRef: string;
   note?: string;
+  /**
+   * "Share to my feed" concept toggle — persisted on the result, but there is
+   * no feed pipeline in this slice (documented as a next step).
+   */
+  shareToFeed?: boolean;
 }
 
 /** One row of `GET /challenges/:id/leaderboard` (denormalised, §6). */

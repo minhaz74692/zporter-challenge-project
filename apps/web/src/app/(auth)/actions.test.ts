@@ -100,29 +100,41 @@ describe('login', () => {
 });
 
 describe('signup', () => {
-  it('requires email, password and displayName', async () => {
+  const fullForm = {
+    email: 'c@z.test',
+    password: 'pw',
+    displayName: 'Coach',
+    teamName: 'Maj FC',
+  };
+
+  it('requires email, password, displayName and teamName', async () => {
     expect(await signup({}, form({ email: 'c@z.test', password: 'pw' }))).toEqual({
       error: 'All fields are required.',
     });
+    expect(
+      await signup({}, form({ email: 'c@z.test', password: 'pw', displayName: 'Coach' })),
+    ).toEqual({ error: 'All fields are required.' });
   });
 
-  it('always registers with the coach role and redirects to /challenges', async () => {
+  it('registers a team account (coach role + teamName) and redirects to /challenges', async () => {
     apiMock.mockResolvedValue({ accessToken: 'a', refreshToken: 'r' });
-    await expect(
-      signup({}, form({ email: 'c@z.test', password: 'pw', displayName: 'Coach' })),
-    ).rejects.toThrow('REDIRECT:/challenges');
+    await expect(signup({}, form(fullForm))).rejects.toThrow('REDIRECT:/challenges');
 
     expect(apiMock).toHaveBeenCalledWith('/auth/signup', {
       auth: false,
-      body: { email: 'c@z.test', password: 'pw', displayName: 'Coach', role: 'coach' },
+      body: {
+        email: 'c@z.test',
+        password: 'pw',
+        displayName: 'Coach',
+        role: 'coach',
+        teamName: 'Maj FC',
+      },
     });
   });
 
   it('returns the ApiError text (e.g. duplicate email)', async () => {
     apiMock.mockRejectedValue(new ApiError(409, 'Email already registered'));
-    expect(
-      await signup({}, form({ email: 'c@z.test', password: 'pw', displayName: 'Coach' })),
-    ).toEqual({ error: 'Email already registered' });
+    expect(await signup({}, form(fullForm))).toEqual({ error: 'Email already registered' });
   });
 });
 

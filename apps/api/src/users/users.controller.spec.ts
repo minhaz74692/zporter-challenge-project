@@ -8,6 +8,7 @@ import type { UsersService } from './users.service.js';
 function build() {
   const svc = {
     searchSummaries: vi.fn().mockResolvedValue([]),
+    teammates: vi.fn().mockResolvedValue([]),
     setAvatar: vi.fn().mockResolvedValue({ id: 'u1' }),
     clearAvatar: vi.fn().mockResolvedValue({ id: 'u1' }),
   };
@@ -38,11 +39,20 @@ describe('UsersController', () => {
     expect(svc.clearAvatar).toHaveBeenCalledWith('u9');
   });
 
-  it('restricts the invite-picker search to coach + admin', () => {
+  it('teammates forwards the current user id', async () => {
+    const { svc, controller } = build();
+    await controller.teammates({ userId: 'u9', role: 'player' });
+    expect(svc.teammates).toHaveBeenCalledWith('u9');
+  });
+
+  it('restricts the invite-picker search to coach + admin, but not teammates', () => {
     expect(Reflect.getMetadata(ROLES_KEY, UsersController.prototype.search)).toEqual([
       'coach',
       'admin',
     ]);
+    expect(
+      Reflect.getMetadata(ROLES_KEY, UsersController.prototype.teammates),
+    ).toBeUndefined();
     expect(Reflect.getMetadata(ROLES_KEY, UsersController.prototype.setAvatar)).toBeUndefined();
   });
 });

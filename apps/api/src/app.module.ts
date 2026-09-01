@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { AuthModule } from './auth/auth.module.js';
+import { BadgesModule } from './badges/badges.module.js';
 import { ChallengesModule } from './challenges/challenges.module.js';
 import { CommonModule } from './common/common.module.js';
 import { ConfigModule } from './config/config.module.js';
@@ -29,6 +30,7 @@ import { UsersModule } from './users/users.module.js';
     ParticipantsModule,
     ResultsModule,
     NotificationsModule,
+    BadgesModule,
     ChallengesModule,
   ],
   controllers: [AppController],

@@ -5,6 +5,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { ThrottlerModule } from '@nestjs/throttler';
 import type { AuthConfig } from '../config/configuration.js';
+import { TeamsModule } from '../teams/teams.module.js';
 import { UsersModule } from '../users/users.module.js';
 import { AuthController } from './auth.controller.js';
 import { AuthService } from './auth.service.js';
@@ -16,6 +17,7 @@ import { JwtStrategy } from './strategies/jwt.strategy.js';
 @Module({
   imports: [
     UsersModule,
+    TeamsModule,
     PassportModule,
     JwtModule.registerAsync({
       inject: [ConfigService],

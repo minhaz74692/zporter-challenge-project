@@ -25,7 +25,6 @@ class ChallengesScreen extends StatelessWidget {
         backgroundColor: AppColors.bg,
         drawer: const AppDrawer(),
         appBar: AppBar(
-          backgroundColor: AppColors.bg,
           title: const Text('Challenges'),
           actions: [
             const _TopBarIcon(icon: Icons.chat_bubble_outline_rounded),
@@ -33,19 +32,13 @@ class ChallengesScreen extends StatelessWidget {
               onTap: () => context.push(AppRoutes.notifications),
             ),
             const _TopBarIcon(icon: Icons.search_rounded),
-            const SizedBox(width: 8),
+            // Trails the last icon to a 16px inset from the screen edge.
+            const SizedBox(width: 10),
           ],
           bottom: TabBar(
+            // Colours + label style come from AppTheme's tabBarTheme.
             isScrollable: true,
             tabAlignment: TabAlignment.start,
-            indicatorColor: AppColors.accent,
-            indicatorSize: TabBarIndicatorSize.label,
-            labelColor: AppColors.accent,
-            unselectedLabelColor: AppColors.muted,
-            labelStyle: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-            ),
             tabs: [for (final c in _tabs) Tab(text: c.label)],
           ),
         ),
@@ -71,8 +64,9 @@ class _TopBarIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 4),
-    child: Icon(icon, color: AppColors.fg, size: 22),
+    padding: const EdgeInsets.symmetric(horizontal: 6),
+    // Colour + 24px size come from AppBarTheme.actionsIconTheme.
+    child: Icon(icon),
   );
 }
 
@@ -89,25 +83,23 @@ class _NotificationsBell extends ConsumerWidget {
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 6),
         child: Stack(
           clipBehavior: Clip.none,
           children: [
-            const Icon(
-              Icons.notifications_none_rounded,
-              color: AppColors.fg,
-              size: 22,
-            ),
+            // Colour + 24px size come from AppBarTheme.actionsIconTheme.
+            const Icon(Icons.notifications_none_rounded),
             if (hasUnread)
               Positioned(
                 right: -1,
                 top: -1,
                 child: Container(
-                  width: 8,
-                  height: 8,
-                  decoration: const BoxDecoration(
-                    color: AppColors.primary,
+                  width: 12,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: AppColors.badge,
                     shape: BoxShape.circle,
+                    border: Border.all(color: AppColors.bg, width: 2),
                   ),
                 ),
               ),

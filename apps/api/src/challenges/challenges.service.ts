@@ -16,6 +16,7 @@ import type {
   SubmitResultRequest,
   UserSummary,
 } from '@zporter/shared';
+import { BadgesService } from '../badges/badges.service.js';
 import { notificationCopy } from '../notifications/notification-copy.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { ParticipantsRepository } from '../participants/participants.repository.js';
@@ -48,6 +49,7 @@ export class ChallengesService {
     private readonly participation: ParticipantsService,
     private readonly results: ResultsService,
     private readonly notifications: NotificationsService,
+    private readonly badges: BadgesService,
     private readonly storage: StorageService,
     private readonly templates: TemplatesService,
     private readonly teams: TeamsService,
@@ -234,6 +236,21 @@ export class ChallengesService {
       approved,
     );
 
+    // Recognition: an approved result earns the challenge's reward badge (once).
+    if (approved && !participant.awardedBadge && challenge.rewardBadgeId) {
+      const badge = await this.badges.getById(challenge.rewardBadgeId);
+      if (badge) {
+        await this.participants.awardBadge(challengeId, subjectUserId, badge);
+        await this.notifications.notify({
+          userId: subjectUserId,
+          type: 'badge_earned',
+          challengeId: challenge.id,
+          actorId: caller.userId,
+          ...notificationCopy('badge_earned', challenge.title, badge.name),
+        });
+      }
+    }
+
     await this.notifications.notify({
       userId: subjectUserId,
       type: 'result_verified',
@@ -244,6 +261,40 @@ export class ChallengesService {
     });
 
     return (await this.participants.findOne(challengeId, subjectUserId))!;
+  }
+
+  /**
+   * "Deadline soon" nudge — notify every participant who accepted but has not
+   * reported a result yet. Manually triggered by the creator (no scheduler in
+   * this slice); the Figma copy lives in `notificationCopy('challenge_reminder')`.
+   */
+  async remindPending(
+    challengeId: string,
+    user: AuthenticatedUser,
+  ): Promise<{ reminded: number }> {
+    const challenge = this.withComputedStatus(
+      await this.requireOwned(challengeId, user),
+    );
+    if (challenge.status === 'ended') {
+      throw new BadRequestException('This challenge has already ended');
+    }
+
+    const roster = await this.participants.listByChallenge(challengeId);
+    const pending = roster.filter(
+      (p) => p.inviteState === 'accepted' && p.resultState === 'pending',
+    );
+
+    await Promise.all(
+      pending.map((p) =>
+        this.notifications.notify({
+          userId: p.userId,
+          type: 'challenge_reminder',
+          challengeId: challenge.id,
+          ...notificationCopy('challenge_reminder', challenge.title),
+        }),
+      ),
+    );
+    return { reminded: pending.length };
   }
 
   async listByCategory(
@@ -278,16 +329,20 @@ export class ChallengesService {
     viewer: AuthenticatedUser,
   ): Promise<ChallengeDetail> {
     const challenge = await this.requireChallenge(challengeId);
-    const [participant, leaderboardPreview, creator] = await Promise.all([
+    const [participant, leaderboardPreview, creator, rewardBadge] = await Promise.all([
       this.participants.findOne(challengeId, viewer.userId),
       this.repo.leaderboard(challengeId, 5),
       this.users.summaryById(challenge.createdBy).catch(() => undefined),
+      challenge.rewardBadgeId
+        ? this.badges.getById(challenge.rewardBadgeId).catch(() => null)
+        : null,
     ]);
     return {
       ...this.withComputedStatus(challenge),
       creator,
       viewerParticipant: participant ? this.toSummary(participant) : undefined,
       leaderboardPreview,
+      rewardBadge: rewardBadge ?? undefined,
     };
   }
 
@@ -427,6 +482,7 @@ export class ChallengesService {
       resultState: participant.resultState,
       rank: participant.rank,
       submittedResult: participant.submittedResult,
+      awardedBadge: participant.awardedBadge,
     };
   }
 
@@ -486,16 +542,35 @@ export class ChallengesService {
     };
   }
 
-  /** Merge explicit `userIds` with a team's members, drop the requester. */
+  /**
+   * Resolve who to invite: explicit `userIds` (scoped to the coach's own squad)
+   * merged with a team's players. `admin` may invite anyone; the requester is
+   * always dropped.
+   */
   private async resolveTargets(
     input: { userIds?: string[]; teamId?: string },
     requester: AuthenticatedUser,
   ): Promise<string[]> {
-    const ids = new Set(input.userIds ?? []);
+    const explicit = input.userIds ?? [];
+    const ids = new Set<string>();
+
+    if (explicit.length > 0) {
+      if (requester.role === 'admin') {
+        for (const id of explicit) ids.add(id);
+      } else {
+        const squad = await this.teams.squadPlayerIds(requester.userId);
+        for (const id of explicit) if (squad.has(id)) ids.add(id);
+      }
+    }
+
     if (input.teamId) {
-      const memberIds = await this.teams.memberUserIds(input.teamId, requester.userId);
+      const memberIds = await this.teams.invitableMemberIds(
+        input.teamId,
+        requester.userId,
+      );
       for (const id of memberIds) ids.add(id);
     }
+
     ids.delete(requester.userId);
     return [...ids];
   }

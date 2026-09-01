@@ -81,6 +81,14 @@ class _NotificationTile extends StatelessWidget {
       icon: Icons.flag_outlined,
       color: AppColors.primary,
     ),
+    AppNotificationType.challengeReminder => (
+      icon: Icons.alarm_rounded,
+      color: AppColors.accent,
+    ),
+    AppNotificationType.badgeEarned => (
+      icon: Icons.workspace_premium_rounded,
+      color: AppColors.success,
+    ),
     AppNotificationType.challengeEnded => (
       icon: Icons.timer_off_outlined,
       color: AppColors.muted,

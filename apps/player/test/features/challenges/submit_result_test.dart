@@ -19,6 +19,7 @@ void main() {
     bool toggle = false,
     String videoUrl = 'https://v.test/x.mp4',
     String controller = '#Ref123',
+    bool shareToFeed = false,
   }) =>
       submit(
         challengeId: 'c1',
@@ -29,6 +30,7 @@ void main() {
         controllerRef: controller,
         performedAt: DateTime.utc(2026, 8, 30, 9),
         arena: 'Malmo IP',
+        shareToFeed: shareToFeed,
       );
 
   test('happy path submits the parsed value + trimmed fields', () async {
@@ -78,5 +80,10 @@ void main() {
   test('a boolean challenge submits the toggle', () async {
     await run(type: ResultType.boolean, toggle: true);
     expect(repo.submitted.single.value, true);
+  });
+
+  test('the shareToFeed flag reaches the request', () async {
+    await run(shareToFeed: true);
+    expect(repo.submitted.single.shareToFeed, isTrue);
   });
 }

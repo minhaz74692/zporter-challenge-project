@@ -1,3 +1,4 @@
+import type { Badge } from './badge.js';
 import type { InviteState, IsoDateTime, ResultState, ResultUnit } from './common.js';
 
 /** A reported result (Figma "Add result" form). */
@@ -19,6 +20,8 @@ export interface SubmittedResult {
   /** Set by the controller via the verify endpoint; undefined = not reviewed. */
   verified?: boolean;
   verifiedAt?: IsoDateTime;
+  /** "Share to my feed" concept toggle (no feed pipeline yet — see next steps). */
+  shareToFeed?: boolean;
 }
 
 /** A user's membership + progress in one challenge (`challenges/{id}/participants`). */
@@ -35,6 +38,11 @@ export interface Participant {
   resultState: ResultState;
   submittedResult?: SubmittedResult;
   rank?: number;
+  /**
+   * Recognition badge earned when the controller verified this result.
+   * Denormalised (id + name + icon) so clients render it without a lookup.
+   */
+  awardedBadge?: Badge;
   joinedAt: IsoDateTime;
   /** When the player accepted or declined the invite. */
   respondedAt?: IsoDateTime;
@@ -43,5 +51,5 @@ export interface Participant {
 /** Trimmed participant view embedded in `ChallengeDetail` for the current user. */
 export type ParticipantSummary = Pick<
   Participant,
-  'inviteState' | 'resultState' | 'rank' | 'submittedResult'
+  'inviteState' | 'resultState' | 'rank' | 'submittedResult' | 'awardedBadge'
 >;

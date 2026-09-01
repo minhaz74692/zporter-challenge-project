@@ -1,6 +1,13 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import type { SubmitResultRequest } from '@zporter/shared';
-import { IsDefined, IsISO8601, IsOptional, IsString, MaxLength } from 'class-validator';
+import {
+  IsBoolean,
+  IsDefined,
+  IsISO8601,
+  IsOptional,
+  IsString,
+  MaxLength,
+} from 'class-validator';
 
 export class SubmitResultDto implements SubmitResultRequest {
   @ApiProperty({
@@ -36,4 +43,12 @@ export class SubmitResultDto implements SubmitResultRequest {
   @IsString()
   @MaxLength(500)
   note?: string;
+
+  @ApiPropertyOptional({
+    description:
+      '"Share to my feed" concept toggle — persisted, but no feed pipeline in this slice.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  shareToFeed?: boolean;
 }

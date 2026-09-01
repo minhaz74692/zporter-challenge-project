@@ -23,6 +23,7 @@ function build() {
     submitResult: vi.fn().mockResolvedValue({ id: 'player1' }),
     uploadResultVideo: vi.fn().mockResolvedValue({ videoUrl: 'https://v/x.mp4' }),
     invite: vi.fn().mockResolvedValue({ invited: 2 }),
+    remindPending: vi.fn().mockResolvedValue({ reminded: 3 }),
     setCover: vi.fn().mockResolvedValue({ id: 'c1' }),
   };
   return { svc, controller: new ChallengesController(svc as unknown as ChallengesService) };
@@ -86,13 +87,20 @@ describe('ChallengesController', () => {
     expect(svc.invite).toHaveBeenCalledWith('c1', { userIds: ['p1'] }, coach);
   });
 
-  it('restricts create/update/remove/mine/invite/cover to coach+admin, leaves player routes open', () => {
+  it('remind forwards the challenge id and caller', async () => {
+    const { svc, controller } = build();
+    await controller.remind('c1', coach);
+    expect(svc.remindPending).toHaveBeenCalledWith('c1', coach);
+  });
+
+  it('restricts create/update/remove/mine/invite/remind/cover to coach+admin, leaves player routes open', () => {
     const roles = (fn: object) => Reflect.getMetadata(ROLES_KEY, fn);
     expect(roles(ChallengesController.prototype.create)).toEqual(['coach', 'admin']);
     expect(roles(ChallengesController.prototype.update)).toEqual(['coach', 'admin']);
     expect(roles(ChallengesController.prototype.remove)).toEqual(['coach', 'admin']);
     expect(roles(ChallengesController.prototype.mine)).toEqual(['coach', 'admin']);
     expect(roles(ChallengesController.prototype.invite)).toEqual(['coach', 'admin']);
+    expect(roles(ChallengesController.prototype.remind)).toEqual(['coach', 'admin']);
     expect(roles(ChallengesController.prototype.setCover)).toEqual(['coach', 'admin']);
     expect(roles(ChallengesController.prototype.accept)).toBeUndefined();
     expect(roles(ChallengesController.prototype.list)).toBeUndefined();

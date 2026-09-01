@@ -1,4 +1,5 @@
 import 'package:challenge/features/auth/domain/auth_repository.dart';
+import 'package:challenge/features/auth/domain/team_option.dart';
 import 'package:challenge/features/auth/domain/user.dart';
 
 /// Scriptable [AuthRepository] for `application/` tests. Set the `*Result` /
@@ -9,6 +10,10 @@ class FakeAuthRepository implements AuthRepository {
 
   User? signupResult;
   Object? signupError;
+  String? lastSignupTeamId;
+
+  List<TeamOption> teamsResult = const [];
+  Object? teamsError;
 
   User? meResult;
   Object? meError;
@@ -26,9 +31,17 @@ class FakeAuthRepository implements AuthRepository {
     required String email,
     required String password,
     required String displayName,
+    required String teamId,
   }) async {
+    lastSignupTeamId = teamId;
     if (signupError != null) throw signupError!;
     return signupResult!;
+  }
+
+  @override
+  Future<List<TeamOption>> fetchTeams() async {
+    if (teamsError != null) throw teamsError!;
+    return teamsResult;
   }
 
   @override

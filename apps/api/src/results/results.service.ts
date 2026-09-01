@@ -48,6 +48,7 @@ export class ResultsService {
       arena: dto.arena?.trim(),
       controllerRef: dto.controllerRef.trim(),
       note: dto.note?.trim(),
+      shareToFeed: dto.shareToFeed ?? false,
       submittedAt: new Date().toISOString(),
     };
     const resultState = strategy.isCompletion(value) ? 'completed' : 'submitted';

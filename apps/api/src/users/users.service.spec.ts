@@ -41,6 +41,12 @@ class FakeUsersRepository {
   async search(): Promise<UserRecord[]> {
     return [...this.rows.values()];
   }
+
+  async listByClub(club: string, excludeId: string): Promise<UserRecord[]> {
+    return [...this.rows.values()].filter(
+      (u) => u.club === club && u.id !== excludeId,
+    );
+  }
 }
 
 const signup: SignupRequest = {
@@ -119,5 +125,26 @@ describe('UsersService', () => {
       service.setAvatar('ghost', { buffer: Buffer.from('x'), mimetype: 'image/png' }),
     ).rejects.toBeInstanceOf(NotFoundException);
     expect(storage.uploadImage).not.toHaveBeenCalled();
+  });
+
+  it('teammates returns same-club users minus the caller, no email', async () => {
+    const me = await service.create({ ...signup, email: 'a@z.test' }, { club: 'Maj FC' });
+    const mate = await service.create(
+      { ...signup, email: 'b@z.test', displayName: 'Priya Nair' },
+      { club: 'Maj FC' },
+    );
+    await service.create(
+      { ...signup, email: 'c@z.test', displayName: 'Sam Silva' },
+      { club: 'Ope IF' },
+    );
+
+    const mates = await service.teammates(me.id);
+    expect(mates.map((m) => m.id)).toEqual([mate.id]);
+    expect(mates[0]).not.toHaveProperty('email');
+  });
+
+  it('teammates is empty when the caller has no club', async () => {
+    const me = await service.create({ ...signup, email: 'd@z.test' });
+    expect(await service.teammates(me.id)).toEqual([]);
   });
 });

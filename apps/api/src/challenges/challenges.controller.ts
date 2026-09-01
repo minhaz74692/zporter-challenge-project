@@ -162,6 +162,17 @@ export class ChallengesController {
     return this.challenges.uploadResultVideo(id, user, file);
   }
 
+  /** Nudge accepted participants who have not reported a result yet (owner/admin). */
+  @Post(':id/remind')
+  @Roles('coach', 'admin')
+  @HttpCode(200)
+  remind(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<{ reminded: number }> {
+    return this.challenges.remindPending(id, user);
+  }
+
   @Post(':id/invite')
   @Roles('coach', 'admin')
   invite(

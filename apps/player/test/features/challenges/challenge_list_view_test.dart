@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:challenge/core/network/network_providers.dart';
+import 'package:challenge/features/auth/data/auth_providers.dart';
 import 'package:challenge/features/challenges/data/challenges_providers.dart';
 import 'package:challenge/features/challenges/domain/challenge_enums.dart';
 import 'package:challenge/features/challenges/presentation/widgets/challenge_card_skeleton.dart';
@@ -9,7 +11,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../support/fake_auth_repository.dart';
 import '../../support/fake_challenges_repository.dart';
+import '../../support/fake_token_storage.dart';
 import '../../support/fixtures.dart';
 
 void main() {
@@ -17,7 +21,14 @@ void main() {
 
   Widget host(FakeChallengesRepository repo, ChallengeCategory category) {
     return ProviderScope(
-      overrides: [challengesRepositoryProvider.overrideWithValue(repo)],
+      overrides: [
+        challengesRepositoryProvider.overrideWithValue(repo),
+        // The list provider waits for a signed-in session before it fetches.
+        authRepositoryProvider.overrideWithValue(
+          FakeAuthRepository()..meResult = buildUser(),
+        ),
+        tokenStorageProvider.overrideWithValue(FakeTokenStorage(access: 'tok')),
+      ],
       child: MaterialApp(home: Scaffold(body: ChallengeListView(category: category))),
     );
   }

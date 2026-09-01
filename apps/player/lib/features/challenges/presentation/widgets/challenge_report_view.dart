@@ -7,12 +7,14 @@ import '../../../../core/util/formatters.dart';
 import '../../../../core/widgets/gradient_panel.dart';
 import '../../../../core/widgets/labeled_field.dart';
 import '../../../../core/widgets/primary_button.dart';
+import '../../../auth/application/auth_notifier.dart';
 import '../../application/challenge_detail_provider.dart';
 import '../../application/challenge_list_provider.dart';
 import '../../application/submit_result.dart';
 import '../../domain/challenge.dart';
 import '../../domain/participant.dart';
 import '../../domain/result_strategy.dart';
+import 'controller_picker.dart';
 import 'result_summary_card.dart';
 import 'result_video_field.dart';
 
@@ -39,10 +41,12 @@ class ChallengeReportView extends ConsumerStatefulWidget {
 class _ChallengeReportViewState extends ConsumerState<ChallengeReportView> {
   final _value = TextEditingController();
   final _arena = TextEditingController();
-  final _controller = TextEditingController();
   bool _toggle = false;
+  bool _shareToFeed = false;
   DateTime _performedAt = DateTime.now();
   String? _videoUrl;
+  String? _controllerHandle;
+  String? _controllerName;
   bool _submitting = false;
 
   Challenge get c => widget.challenge;
@@ -52,7 +56,6 @@ class _ChallengeReportViewState extends ConsumerState<ChallengeReportView> {
   void dispose() {
     _value.dispose();
     _arena.dispose();
-    _controller.dispose();
     super.dispose();
   }
 
@@ -104,6 +107,21 @@ class _ChallengeReportViewState extends ConsumerState<ChallengeReportView> {
     _value.text = _strategy.step(_value.text, delta);
   }
 
+  Future<void> _pickController() async {
+    final choice = await showControllerPicker(
+      context,
+      ref,
+      challengeId: c.id,
+      excludeUserId: ref.read(authNotifierProvider).valueOrNull?.id,
+    );
+    if (choice != null) {
+      setState(() {
+        _controllerHandle = choice.handle;
+        _controllerName = choice.displayName;
+      });
+    }
+  }
+
   Future<void> _submit() async {
     setState(() => _submitting = true);
     try {
@@ -115,9 +133,10 @@ class _ChallengeReportViewState extends ConsumerState<ChallengeReportView> {
             rawValue: _value.text,
             toggleValue: _toggle,
             videoUrl: _videoUrl ?? '',
-            controllerRef: _controller.text,
+            controllerRef: _controllerHandle ?? '',
             performedAt: _performedAt,
             arena: _arena.text,
+            shareToFeed: _shareToFeed,
           );
 
       ref.invalidate(challengeDetailProvider(c.id));
@@ -144,7 +163,11 @@ class _ChallengeReportViewState extends ConsumerState<ChallengeReportView> {
 
     final Widget body;
     if (submitted != null) {
-      body = ResultSummaryCard(result: submitted, rank: vp?.rank);
+      body = ResultSummaryCard(
+        result: submitted,
+        rank: vp?.rank,
+        badge: vp?.awardedBadge,
+      );
     } else if (vp != null && vp.hasAccepted && !c.hasEnded) {
       body = _form();
     } else if (c.hasEnded) {
@@ -223,10 +246,24 @@ class _ChallengeReportViewState extends ConsumerState<ChallengeReportView> {
           ),
         ),
         const SizedBox(height: 16),
-        TextFormField(
-          controller: _controller,
-          style: const TextStyle(color: AppColors.fg, fontSize: 16),
-          decoration: fieldDecoration('Controller', hintText: '#Handle'),
+        LabeledField(
+          label: 'Controller',
+          onTap: _pickController,
+          trailing: const Icon(Icons.expand_more_rounded, size: 18),
+          child: Text(
+            _controllerName == null
+                ? 'Select who verifies this'
+                : '$_controllerName  ${_controllerHandle!}',
+            style: TextStyle(
+              color: _controllerName == null ? AppColors.faint : AppColors.fg,
+              fontSize: 16,
+            ),
+          ),
+        ),
+        const SizedBox(height: 20),
+        _ShareToFeedToggle(
+          value: _shareToFeed,
+          onChanged: (v) => setState(() => _shareToFeed = v),
         ),
         const SizedBox(height: 26),
         PrimaryButton(
@@ -313,4 +350,42 @@ class _StepArrow extends StatelessWidget {
     onTap: onTap,
     child: Icon(icon, size: 20, color: AppColors.muted),
   );
+}
+
+/// "Share to my feed" recognition concept toggle. The flag is persisted with the
+/// result; there is no feed pipeline in this slice (documented as a next step).
+class _ShareToFeedToggle extends StatelessWidget {
+  const _ShareToFeedToggle({required this.value, required this.onChanged});
+
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        const Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Share to my feed',
+                style: TextStyle(color: AppColors.fg, fontSize: 16),
+              ),
+              SizedBox(height: 2),
+              Text(
+                'Posts to your Zporter feed once the result is verified',
+                style: TextStyle(color: AppColors.muted, fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+        Switch(
+          value: value,
+          activeThumbColor: AppColors.success,
+          onChanged: onChanged,
+        ),
+      ],
+    );
+  }
 }

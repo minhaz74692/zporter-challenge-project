@@ -46,4 +46,17 @@ void main() {
   test('passes a boolean value through unchanged', () {
     expect(build(value: true).toJson()['value'], true);
   });
+
+  test('includes shareToFeed only when the toggle is on', () {
+    expect(build().toJson().containsKey('shareToFeed'), isFalse);
+
+    final shared = SubmitResultRequest(
+      value: 1,
+      videoUrl: 'v',
+      performedAt: DateTime.utc(2026, 1, 2),
+      controllerRef: '#c',
+      shareToFeed: true,
+    ).toJson();
+    expect(shared['shareToFeed'], true);
+  });
 }

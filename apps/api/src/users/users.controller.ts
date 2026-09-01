@@ -31,6 +31,15 @@ export class UsersController {
     return this.users.searchSummaries(query);
   }
 
+  /**
+   * The caller's club-mates (any authenticated user). The player app uses this
+   * to pick a result controller — "your coach or your friend".
+   */
+  @Get('teammates')
+  teammates(@CurrentUser() user: AuthenticatedUser): Promise<UserSummary[]> {
+    return this.users.teammates(user.userId);
+  }
+
   /** Upload / replace the current user's avatar (JPEG/PNG/WebP, ≤5 MB). */
   @Post('me/avatar')
   @UseInterceptors(FileInterceptor('file'))

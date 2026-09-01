@@ -5,6 +5,7 @@ import type { ParticipantsRepository } from '../participants/participants.reposi
 import type { ParticipantsService } from '../participants/participants.service.js';
 import type { ResultsService } from '../results/results.service.js';
 import type { NotificationsService } from '../notifications/notifications.service.js';
+import type { BadgesService } from '../badges/badges.service.js';
 import type { TeamsService } from '../teams/teams.service.js';
 import type { TemplatesService } from '../templates/templates.service.js';
 import type { UsersService } from '../users/users.service.js';
@@ -70,6 +71,7 @@ function build() {
     listByChallenge: vi.fn(async (cid: string) => parts.filter((p) => p.challengeId === cid)),
     addInvites: vi.fn(async (_cid: string, invites: { id: string }[]) => invites),
     setResultVerification: vi.fn(async () => undefined),
+    awardBadge: vi.fn(async () => undefined),
   };
   const templates = { getById: vi.fn(async (): Promise<ChallengeTemplate> => TEMPLATE) };
   const participation = {
@@ -82,8 +84,21 @@ function build() {
     ),
   };
   const notifications = { notify: vi.fn(async () => undefined) };
+  const badges = {
+    getById: vi.fn(async (id: string) => ({
+      id,
+      name: 'Sharp Shooter',
+      icon: '🎯',
+      description: 'Nailed it',
+    })),
+    list: vi.fn(async () => []),
+  };
   const storage = { uploadImage: vi.fn(async () => 'https://img.test/x') };
-  const teams = { memberUserIds: vi.fn(async () => ['player1', 'player2', 'player3']) };
+  const teams = {
+    // Team fan-out excludes the coach; the coach's squad for invite scoping.
+    invitableMemberIds: vi.fn(async () => ['player1', 'player2', 'player3']),
+    squadPlayerIds: vi.fn(async () => new Set(['player1', 'player2', 'player3'])),
+  };
   const users = {
     summaryById: vi.fn(async (id: string) => makeUserSummary({ id, displayName: `User ${id}` })),
     summaryByHandle: vi.fn(async () => null),
@@ -96,12 +111,13 @@ function build() {
     participation as unknown as ParticipantsService,
     results as unknown as ResultsService,
     notifications as unknown as NotificationsService,
+    badges as unknown as BadgesService,
     storage as unknown as import('../storage/storage.service.js').StorageService,
     templates as unknown as TemplatesService,
     teams as unknown as TeamsService,
     users as unknown as UsersService,
   );
-  return { service, repo, participants, participation, results, notifications, users, challenges, parts };
+  return { service, repo, participants, participation, results, notifications, badges, users, challenges, parts };
 }
 
 describe('ChallengesService', () => {
@@ -155,12 +171,32 @@ describe('ChallengesService', () => {
   });
 
   describe('invite', () => {
-    it('fans out a team, merges userIds, drops the requester, dedups', async () => {
+    it('fans out a team, merges squad userIds, drops the requester, dedups', async () => {
       const c = await ctx.service.create({ startAt: PAST, deadline: FUTURE, templateId: 't' } as never, coach);
       const res = await ctx.service.invite(c.id, { userIds: ['player1', 'x'], teamId: 'team1' }, coach);
       const passed = ctx.participants.addInvites.mock.calls[0][1].map((u: { id: string }) => u.id).sort();
-      expect(passed).toEqual(['player1', 'player2', 'player3', 'x']);
-      expect(res.invited).toBe(4);
+      // 'x' is not in the coach's squad → dropped; team fan-out adds player2/3.
+      expect(passed).toEqual(['player1', 'player2', 'player3']);
+      expect(res.invited).toBe(3);
+    });
+
+    it('drops explicit userIds outside the coach`s squad', async () => {
+      const c = await ctx.service.create({ startAt: PAST, deadline: FUTURE, templateId: 't' } as never, coach);
+      const res = await ctx.service.invite(c.id, { userIds: ['player1', 'outsider'] }, coach);
+      const passed = ctx.participants.addInvites.mock.calls[0][1].map((u: { id: string }) => u.id);
+      expect(passed).toEqual(['player1']);
+      expect(res.invited).toBe(1);
+    });
+
+    it('lets an admin invite anyone, bypassing squad scoping', async () => {
+      const c = await ctx.service.create(
+        { startAt: PAST, deadline: FUTURE, templateId: 't', visibility: 'all' } as never,
+        admin,
+      );
+      const res = await ctx.service.invite(c.id, { userIds: ['anyone', 'else'] }, admin);
+      const passed = ctx.participants.addInvites.mock.calls[0][1].map((u: { id: string }) => u.id).sort();
+      expect(passed).toEqual(['anyone', 'else']);
+      expect(res.invited).toBe(2);
     });
 
     it('403s when the caller does not own the challenge', async () => {
@@ -287,6 +323,93 @@ describe('ChallengesService', () => {
       expect(ctx.participants.setResultVerification).toHaveBeenCalledWith('c-v', 'player1', true);
       expect(ctx.notifications.notify).toHaveBeenCalledWith(
         expect.objectContaining({ userId: 'player1', type: 'result_verified' }),
+      );
+    });
+  });
+
+  describe('recognition: badge on verified result', () => {
+    beforeEach(() => {
+      ctx.challenges.push(
+        makeChallenge({ id: 'c-badge', deadline: FUTURE, rewardBadgeId: 'sharp-shooter' }),
+      );
+      ctx.participants.findOne.mockResolvedValue({
+        userId: 'player1',
+        displayName: 'Priya',
+        submittedResult: { value: 10, controllerRef: '#ctrl' },
+      });
+      ctx.users.getById.mockResolvedValue({ id: 'coach1', handle: '#ctrl' });
+    });
+
+    it('awards the challenge`s reward badge and notifies the player on approval', async () => {
+      await ctx.service.verifyResult('c-badge', 'player1', coach, true);
+      expect(ctx.participants.awardBadge).toHaveBeenCalledWith(
+        'c-badge',
+        'player1',
+        expect.objectContaining({ id: 'sharp-shooter', name: 'Sharp Shooter' }),
+      );
+      expect(ctx.notifications.notify).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: 'player1', type: 'badge_earned' }),
+      );
+    });
+
+    it('does not award a badge when the result is rejected', async () => {
+      await ctx.service.verifyResult('c-badge', 'player1', coach, false);
+      expect(ctx.participants.awardBadge).not.toHaveBeenCalled();
+    });
+
+    it('does not re-award when the participant already has a badge', async () => {
+      ctx.participants.findOne.mockResolvedValue({
+        userId: 'player1',
+        displayName: 'Priya',
+        submittedResult: { value: 10, controllerRef: '#ctrl' },
+        awardedBadge: { id: 'sharp-shooter', name: 'Sharp Shooter', icon: '🎯', description: 'x' },
+      });
+      await ctx.service.verifyResult('c-badge', 'player1', coach, true);
+      expect(ctx.participants.awardBadge).not.toHaveBeenCalled();
+    });
+
+    it('skips the award (no error) when the challenge has no reward badge', async () => {
+      ctx.challenges.push(makeChallenge({ id: 'c-nobadge', deadline: FUTURE }));
+      await ctx.service.verifyResult('c-nobadge', 'player1', coach, true);
+      expect(ctx.participants.awardBadge).not.toHaveBeenCalled();
+      expect(ctx.badges.getById).not.toHaveBeenCalled();
+    });
+
+    it('getDetail embeds the resolved reward badge', async () => {
+      const detail = await ctx.service.getDetail('c-badge', { userId: 'player1', role: 'player' });
+      expect(detail.rewardBadge).toMatchObject({ id: 'sharp-shooter', name: 'Sharp Shooter' });
+    });
+  });
+
+  describe('remindPending', () => {
+    beforeEach(() => {
+      ctx.challenges.push(makeChallenge({ id: 'c-rem', createdBy: 'coach1', deadline: FUTURE }));
+      ctx.parts.push(
+        makeParticipant({ challengeId: 'c-rem', userId: 'p-accepted', inviteState: 'accepted', resultState: 'pending' }),
+        makeParticipant({ challengeId: 'c-rem', userId: 'p-done', inviteState: 'accepted', resultState: 'submitted' }),
+        makeParticipant({ challengeId: 'c-rem', userId: 'p-invited', inviteState: 'invited', resultState: 'pending' }),
+      );
+    });
+
+    it('notifies only accepted participants who have not reported, and returns the count', async () => {
+      const res = await ctx.service.remindPending('c-rem', coach);
+      expect(res).toEqual({ reminded: 1 });
+      expect(ctx.notifications.notify).toHaveBeenCalledTimes(1);
+      expect(ctx.notifications.notify).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: 'p-accepted', type: 'challenge_reminder' }),
+      );
+    });
+
+    it('403s when the caller does not own the challenge', async () => {
+      await expect(
+        ctx.service.remindPending('c-rem', { userId: 'coach2', role: 'coach' }),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
+    it('rejects a reminder on an already-ended challenge', async () => {
+      ctx.challenges.push(makeChallenge({ id: 'c-rem-old', createdBy: 'coach1', deadline: PAST }));
+      await expect(ctx.service.remindPending('c-rem-old', coach)).rejects.toBeInstanceOf(
+        BadRequestException,
       );
     });
   });

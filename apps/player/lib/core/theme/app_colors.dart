@@ -9,7 +9,7 @@ import 'package:flutter/material.dart';
 /// never a raw hex.
 abstract final class AppColors {
   // Surfaces, from furthest-back to nearest-front.
-  static const bg = Color(0xFF000000);
+  static const bg = Color(0xFF030405); // Figma "Surface / background"
   static const canvas = Color(0xFF111115);
   static const surface = Color(0xFF14151A);
   static const surfaceRaised = Color(0xFF1C1D23);
@@ -24,12 +24,18 @@ abstract final class AppColors {
   static const cardBottom = Color(0xFF0D0F12);
 
   // Text, from most to least prominent.
+  static const fgStrong = Color(0xFFFFFFFF); // pure white — app-bar title & icons (Figma)
   static const fg = Color(0xFFF3F4F7);
   static const muted = Color(0xFF8A8F9C);
   static const faint = Color(0xFF5C606C);
 
   // Actions / status.
   static const primary = Color(0xFF4E5BF2); // primary CTA — "Open", "Accept"
+  static const badge = Color(0xFF4654EA); // unread / notification dot (Figma)
+
+  // Tabs (Figma "Text Tab").
+  static const tabActive = Color(0xFFFF9607); // selected label + underline
+  static const tabInactive = Color(0xFF818389); // unselected label
   static const primaryHover = Color(0xFF4049D6);
   static const accent = Color(0xFFFFA333); // active / selected
   static const accentHover = Color(0xFFFF9314);

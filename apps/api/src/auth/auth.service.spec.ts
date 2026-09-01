@@ -1,10 +1,11 @@
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { UnauthorizedException } from '@nestjs/common';
-import type { SignupRequest } from '@zporter/shared';
+import { BadRequestException, UnauthorizedException } from '@nestjs/common';
+import type { SignupRequest, Team } from '@zporter/shared';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { UserRecord } from '../users/entities/user.entity.js';
 import type { UsersService } from '../users/users.service.js';
+import type { TeamsService } from '../teams/teams.service.js';
 import { AuthService } from './auth.service.js';
 import type { NewSession, SessionRecord } from './entities/session.entity.js';
 import type { SessionsRepository } from './sessions.repository.js';
@@ -86,15 +87,29 @@ class FakeSessionsRepository {
   }
 }
 
+class FakeTeamsService {
+  createForCoach = vi.fn(
+    async (coachId: string, name: string): Promise<Team> => ({
+      id: 'team1',
+      name,
+      coachId,
+      createdAt: new Date().toISOString(),
+    }),
+  );
+  addPlayer = vi.fn(async (_userId: string, _teamId: string): Promise<void> => {});
+}
+
 const SIGNUP: SignupRequest = {
   email: 'coach@zporter.test',
   password: 'Passw0rd!',
   displayName: 'Coach',
   role: 'coach',
+  teamName: 'Maj FC',
 };
 
 function build() {
   const users = new FakeUsersService();
+  const teams = new FakeTeamsService();
   const sessions = new FakeSessionsRepository();
   const jwt = new JwtService({ secret: 'test-secret' });
   const config = {
@@ -102,11 +117,12 @@ function build() {
   } as unknown as ConfigService;
   const service = new AuthService(
     users as unknown as UsersService,
+    teams as unknown as TeamsService,
     sessions as unknown as SessionsRepository,
     jwt,
     config,
   );
-  return { service, users, sessions, jwt };
+  return { service, users, teams, sessions, jwt };
 }
 
 describe('AuthService', () => {
@@ -127,6 +143,40 @@ describe('AuthService', () => {
     const session = ctx.sessions.rows.get(`${parsed.userId}/${parsed.sessionId}`)!;
     expect(session.refreshTokenHash).toBe(sha256(parsed.secret));
     expect(session.userAgent).toBe('vitest-agent');
+  });
+
+  it('coach signup creates the coach`s squad', async () => {
+    const res = await ctx.service.signup(SIGNUP);
+    expect(ctx.teams.createForCoach).toHaveBeenCalledWith(res.user.id, 'Maj FC');
+  });
+
+  it('coach signup without a team name is rejected', async () => {
+    await expect(
+      ctx.service.signup({ ...SIGNUP, teamName: '  ' }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('player signup joins the chosen squad', async () => {
+    const res = await ctx.service.signup({
+      email: 'p@zporter.test',
+      password: 'Passw0rd!',
+      displayName: 'Player',
+      role: 'player',
+      teamId: 'team1',
+    });
+    expect(ctx.teams.addPlayer).toHaveBeenCalledWith(res.user.id, 'team1');
+    expect(ctx.teams.createForCoach).not.toHaveBeenCalled();
+  });
+
+  it('player signup without a team id is rejected', async () => {
+    await expect(
+      ctx.service.signup({
+        email: 'p@zporter.test',
+        password: 'Passw0rd!',
+        displayName: 'Player',
+        role: 'player',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 
   it('login rejects a wrong password and an unknown email', async () => {

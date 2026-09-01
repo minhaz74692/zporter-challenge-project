@@ -59,6 +59,14 @@ export class UsersRepository {
     return record;
   }
 
+  /** Everyone in the same club (the prototype's stand-in for "teammates"). */
+  async listByClub(club: string, excludeId: string): Promise<UserRecord[]> {
+    const snap = await this.col.where('club', '==', club).get();
+    return snap.docs
+      .map((d) => this.fromDoc(d))
+      .filter((u) => u.id !== excludeId);
+  }
+
   /**
    * Invite-picker search. Firestore has no substring index, so this fetches a
    * capped page and filters in memory — fine at prototype scale (tens of users).

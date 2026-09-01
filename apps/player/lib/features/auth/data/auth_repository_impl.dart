@@ -3,12 +3,13 @@ import 'package:dio/dio.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/storage/token_storage.dart';
 import '../domain/auth_repository.dart';
+import '../domain/team_option.dart';
 import '../domain/user.dart';
 
 /// REST implementation of [AuthRepository].
 ///
 /// The player app self-registers as `player` only, so [signup] hard-codes the
-/// role rather than exposing it.
+/// role rather than exposing it; the chosen `teamId` is the squad to join.
 class AuthRepositoryImpl implements AuthRepository {
   AuthRepositoryImpl({required Dio dio, required TokenStorage storage})
     : _dio = dio,
@@ -33,6 +34,7 @@ class AuthRepositoryImpl implements AuthRepository {
     required String email,
     required String password,
     required String displayName,
+    required String teamId,
   }) {
     return guardApiCall(() async {
       final res = await _dio.post<Map<String, dynamic>>(
@@ -42,9 +44,21 @@ class AuthRepositoryImpl implements AuthRepository {
           'password': password,
           'displayName': displayName,
           'role': 'player',
+          'teamId': teamId,
         },
       );
       return _storeSessionAndReturnUser(res.data!);
+    });
+  }
+
+  @override
+  Future<List<TeamOption>> fetchTeams() {
+    return guardApiCall(() async {
+      final res = await _dio.get<List<dynamic>>('/teams/directory');
+      return (res.data ?? [])
+          .cast<Map<String, dynamic>>()
+          .map(TeamOption.fromJson)
+          .toList(growable: false);
     });
   }
 

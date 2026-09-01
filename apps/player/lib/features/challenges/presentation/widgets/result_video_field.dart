@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../data/challenges_providers.dart';
+import 'result_video_player.dart';
 
 /// The Figma "Video documentation" box: tap to pick a video from the gallery,
 /// which uploads to the API and reports the stored URL via [onChanged] (null
@@ -27,7 +28,7 @@ enum _Phase { empty, uploading, uploaded, error }
 
 class _ResultVideoFieldState extends ConsumerState<ResultVideoField> {
   _Phase _phase = _Phase.empty;
-  String? _fileName;
+  String? _uploadedUrl;
   String? _error;
 
   Future<void> _start() async {
@@ -88,7 +89,7 @@ class _ResultVideoFieldState extends ConsumerState<ResultVideoField> {
 
     setState(() {
       _phase = _Phase.uploading;
-      _fileName = picked!.name;
+      _uploadedUrl = null;
       _error = null;
     });
     widget.onChanged(null);
@@ -98,7 +99,10 @@ class _ResultVideoFieldState extends ConsumerState<ResultVideoField> {
           .read(challengesRepositoryProvider)
           .uploadResultVideo(widget.challengeId, picked.path);
       if (!mounted) return;
-      setState(() => _phase = _Phase.uploaded);
+      setState(() {
+        _phase = _Phase.uploaded;
+        _uploadedUrl = url;
+      });
       widget.onChanged(url);
     } on ApiException catch (e) {
       if (!mounted) return;
@@ -113,26 +117,55 @@ class _ResultVideoFieldState extends ConsumerState<ResultVideoField> {
   @override
   Widget build(BuildContext context) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const Text(
           'Video documentation',
           style: TextStyle(color: AppColors.muted, fontSize: 14),
         ),
         const SizedBox(height: 12),
-        InkWell(
-          onTap: _start,
-          borderRadius: BorderRadius.circular(12),
-          child: Container(
-            height: 190,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: AppColors.surfaceRaised,
-              borderRadius: BorderRadius.circular(12),
-              border: _phase == _Phase.error
-                  ? Border.all(color: AppColors.danger)
-                  : null,
+        if (_phase == _Phase.uploaded && _uploadedUrl != null)
+          _preview(_uploadedUrl!)
+        else
+          InkWell(
+            onTap: _start,
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              height: 190,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: AppColors.surfaceRaised,
+                borderRadius: BorderRadius.circular(12),
+                border: _phase == _Phase.error
+                    ? Border.all(color: AppColors.danger)
+                    : null,
+              ),
+              child: Center(child: _content()),
             ),
-            child: Center(child: _content()),
+          ),
+      ],
+    );
+  }
+
+  /// After upload: an actual playable preview + a "replace" affordance (the
+  /// player owns its own taps, so it can't sit inside the pick-InkWell).
+  Widget _preview(String url) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ResultVideoPlayer(url: url, height: 190),
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton.icon(
+            onPressed: _start,
+            icon: const Icon(Icons.refresh_rounded, size: 18),
+            label: const Text('Replace video'),
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.muted,
+              padding: EdgeInsets.zero,
+              minimumSize: const Size(0, 36),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
           ),
         ),
       ],
@@ -161,28 +194,8 @@ class _ResultVideoFieldState extends ConsumerState<ResultVideoField> {
           ],
         );
       case _Phase.uploaded:
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.check_circle_rounded,
-              size: 44,
-              color: AppColors.success,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              _fileName ?? 'Video added',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: AppColors.fg, fontSize: 13),
-            ),
-            const SizedBox(height: 2),
-            const Text(
-              'Tap to replace',
-              style: TextStyle(color: AppColors.muted, fontSize: 12),
-            ),
-          ],
-        );
+        // Rendered as a playable preview by `_preview()`, not here.
+        return const SizedBox.shrink();
       case _Phase.error:
         return Column(
           mainAxisSize: MainAxisSize.min,

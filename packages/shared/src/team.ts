@@ -13,6 +13,16 @@ export interface Team {
   createdAt: IsoDateTime;
 }
 
+/**
+ * Public squad entry for the player signup picker (`GET /teams/directory`) —
+ * no membership detail, just enough to choose a team to join.
+ */
+export interface TeamSummary {
+  id: string;
+  name: string;
+  coachName: string;
+}
+
 /** One row of `teams/{teamId}/members` (doc id = userId). */
 export interface TeamMember {
   userId: string;

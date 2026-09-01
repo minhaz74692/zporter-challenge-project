@@ -110,14 +110,19 @@ export function InvitesPanel() {
       </div>
 
       {tab === 'Search' && (
-        <div className="flex items-center gap-2 rounded-[var(--radius-control)] bg-field/80 px-3 ring-1 ring-white/[0.04]">
-          <Search className="h-4 w-4 text-muted" />
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search players by name"
-            className="h-10 w-full bg-transparent text-[13px] text-fg placeholder:text-faint focus:outline-none"
-          />
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-2 rounded-[var(--radius-control)] bg-field/80 px-3 ring-1 ring-white/[0.04]">
+            <Search className="h-4 w-4 text-muted" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search players by name"
+              className="h-10 w-full bg-transparent text-[13px] text-fg placeholder:text-faint focus:outline-none"
+            />
+          </div>
+          <p className="text-[11px] text-faint">
+            Only players in your squad can be invited.
+          </p>
         </div>
       )}
 

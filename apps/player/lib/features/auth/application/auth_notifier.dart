@@ -49,6 +49,7 @@ class AuthNotifier extends AsyncNotifier<User?> {
     required String email,
     required String password,
     required String displayName,
+    required String teamId,
   }) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard<User?>(
@@ -56,6 +57,7 @@ class AuthNotifier extends AsyncNotifier<User?> {
         email: email,
         password: password,
         displayName: displayName,
+        teamId: teamId,
       ),
     );
   }

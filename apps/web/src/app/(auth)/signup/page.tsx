@@ -12,13 +12,17 @@ export default function SignupPage() {
 
   return (
     <Card>
-      <h1 className="mb-1 text-base font-semibold text-fg">Create a coach account</h1>
+      <h1 className="mb-1 text-base font-semibold text-fg">Create a team account</h1>
       <p className="mb-4 text-xs text-muted">
-        Coaches create and launch challenges. Players sign up in the mobile app.
+        Sign up as a coach and your squad is created with you. Players join it
+        from the mobile app.
       </p>
       <form action={action} className="space-y-4">
-        <Field label="Name">
-          <Input name="displayName" required autoComplete="name" placeholder="Coach Carter" />
+        <Field label="Team name">
+          <Input name="teamName" required maxLength={80} placeholder="Maj FC" />
+        </Field>
+        <Field label="Your name">
+          <Input name="displayName" required autoComplete="name" placeholder="Carl Carter" />
         </Field>
         <Field label="Email">
           <Input name="email" type="email" required autoComplete="email" />

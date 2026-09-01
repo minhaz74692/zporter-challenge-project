@@ -34,6 +34,7 @@ class SubmitResult {
     required DateTime performedAt,
     String? arena,
     String? note,
+    bool shareToFeed = false,
   }) async {
     final strategy = resultStrategyFor(resultType);
     final value = strategy.parse(rawValue, toggleValue);
@@ -61,6 +62,7 @@ class SubmitResult {
         performedAt: performedAt,
         arena: arena?.trim(),
         note: note?.trim(),
+        shareToFeed: shareToFeed,
       ),
     );
   }

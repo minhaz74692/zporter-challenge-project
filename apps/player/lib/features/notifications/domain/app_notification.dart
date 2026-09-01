@@ -9,6 +9,7 @@ enum AppNotificationType {
   resultVerified('result_verified'),
   challengeEnded('challenge_ended'),
   challengeReminder('challenge_reminder'),
+  badgeEarned('badge_earned'),
   other('');
 
   const AppNotificationType(this.apiValue);

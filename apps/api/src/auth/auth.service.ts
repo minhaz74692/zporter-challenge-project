@@ -1,4 +1,9 @@
-import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService, type JwtSignOptions } from '@nestjs/jwt';
 import type {
@@ -10,6 +15,7 @@ import type {
 import type { AuthConfig } from '../config/configuration.js';
 import { toPublicUser, type UserRecord } from '../users/entities/user.entity.js';
 import { UsersService } from '../users/users.service.js';
+import { TeamsService } from '../teams/teams.service.js';
 import { SessionsRepository } from './sessions.repository.js';
 import {
   formatRefreshToken,
@@ -28,6 +34,7 @@ export class AuthService {
 
   constructor(
     private readonly users: UsersService,
+    private readonly teams: TeamsService,
     private readonly sessions: SessionsRepository,
     private readonly jwt: JwtService,
     config: ConfigService,
@@ -35,8 +42,27 @@ export class AuthService {
     this.config = config.getOrThrow<AuthConfig>('auth');
   }
 
+  /**
+   * Signup doubles as team onboarding: a `coach` account creates and owns a new
+   * squad, a `player` account joins an existing one. The user is created first
+   * so a bad `teamId` fails loudly without leaving a squad in a half state.
+   */
   async signup(dto: SignupRequest, userAgent?: string): Promise<AuthResponse> {
     const user = await this.users.create(dto);
+
+    if (dto.role === 'coach') {
+      const teamName = dto.teamName?.trim();
+      if (!teamName) {
+        throw new BadRequestException('teamName is required to create a coach account');
+      }
+      await this.teams.createForCoach(user.id, teamName);
+    } else if (dto.role === 'player') {
+      if (!dto.teamId) {
+        throw new BadRequestException('teamId is required to create a player account');
+      }
+      await this.teams.addPlayer(user.id, dto.teamId);
+    }
+
     return this.startSession(user, userAgent);
   }
 

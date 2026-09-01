@@ -90,6 +90,14 @@ describe('ResultsService', () => {
     expect(resultState).toBe('completed');
   });
 
+  it('persists the shareToFeed toggle (defaults to false)', async () => {
+    await ctx.service.submit(makeChallenge(), 'p1', req({ value: 1, shareToFeed: true }));
+    expect(ctx.repo.submit.mock.calls[0][2]).toMatchObject({ shareToFeed: true });
+
+    await ctx.service.submit(makeChallenge(), 'p1', req({ value: 1 }));
+    expect(ctx.repo.submit.mock.calls[1][2]).toMatchObject({ shareToFeed: false });
+  });
+
   it('marks boolean=false as submitted (not completed)', async () => {
     await ctx.service.submit(makeChallenge({ resultType: 'boolean' }), 'p1', req({ value: false }));
     expect(ctx.repo.submit.mock.calls[0][3]).toBe('submitted');

@@ -56,13 +56,68 @@ const seedUser = (
   position,
 });
 
+/**
+ * Three squads, each a coach + three players — every account male. Coach signup
+ * creates a team, player signup joins one; here they are seeded directly.
+ * `coach@` and `player1@`–`player4@` keep their addresses so the demo
+ * challenges/templates (all owned by `coach@`) still resolve.
+ */
+interface TeamSeed {
+  id: string;
+  name: string;
+  club: string;
+  city: string;
+  coach: { email: string; displayName: string; handle: string };
+  players: { email: string; displayName: string; handle: string; position: string }[];
+}
+
+const TEAMS: TeamSeed[] = [
+  {
+    id: 'team-maj-fc',
+    name: 'Maj FC',
+    club: 'Maj FC',
+    city: 'Goteborg',
+    coach: { email: 'coach@zporter.test', displayName: 'Carl Carter', handle: '#CarCar900002' },
+    players: [
+      { email: 'player1@zporter.test', displayName: 'Diego Duarte', handle: '#DieDua900003', position: 'CM' },
+      { email: 'player2@zporter.test', displayName: 'Sam Silva', handle: '#SamSil900004', position: 'FW' },
+      { email: 'player3@zporter.test', displayName: 'Leo Lindqvist', handle: '#LeoLin900005', position: 'GK' },
+    ],
+  },
+  {
+    id: 'team-ope-if',
+    name: 'Ope IF',
+    club: 'Ope IF',
+    city: 'Ostersund',
+    coach: { email: 'coach2@zporter.test', displayName: 'Erik Ericsson', handle: '#EriEri900006' },
+    players: [
+      { email: 'player4@zporter.test', displayName: 'Marcus Berg', handle: '#MarBer900007', position: 'FW' },
+      { email: 'player5@zporter.test', displayName: 'Oskar Nyman', handle: '#OskNym900008', position: 'DF' },
+      { email: 'player6@zporter.test', displayName: 'Anton Holm', handle: '#AntHol900009', position: 'CM' },
+    ],
+  },
+  {
+    id: 'team-ifk-nord',
+    name: 'IFK Nord',
+    club: 'IFK Nord',
+    city: 'Umea',
+    coach: { email: 'coach3@zporter.test', displayName: 'Johan Nilsson', handle: '#JohNil900010' },
+    players: [
+      { email: 'player7@zporter.test', displayName: 'Viktor Sund', handle: '#VikSun900011', position: 'MF' },
+      { email: 'player8@zporter.test', displayName: 'Elias Lund', handle: '#EliLun900012', position: 'DF' },
+      { email: 'player9@zporter.test', displayName: 'Hugo Falk', handle: '#HugFal900013', position: 'FW' },
+    ],
+  },
+];
+
 const USERS: UserSeed[] = [
-  seedUser('admin@zporter.test', 'Amara Admin', 'admin', '#AmaAdm900001', 'Stockholm', 'Zporter HQ', 'Admin'),
-  seedUser('coach@zporter.test', 'Coach Carter', 'coach', '#CoaCar900002', 'Stockholm', 'Maj FC', 'Head Coach'),
-  seedUser('player1@zporter.test', 'Priya Nair', 'player', '#PriNai900003', 'Goteborg', 'Maj FC', 'FW'),
-  seedUser('player2@zporter.test', 'Diego Duarte', 'player', '#DieDua900004', 'Malmo', 'Maj FC', 'CM'),
-  seedUser('player3@zporter.test', 'Mia Moeller', 'player', '#MiaMoe900005', 'Uppsala', 'Maj FC', 'GK'),
-  seedUser('player4@zporter.test', 'Sam Silva', 'player', '#SamSil900006', 'Ostersund', 'Ope IF', 'DF'),
+  seedUser('admin@zporter.test', 'Adam Ackerman', 'admin', '#AdaAck900001', 'Stockholm', 'Zporter HQ', 'Admin'),
+  ...TEAMS.flatMap((team) => [
+    seedUser(team.coach.email, team.coach.displayName, 'coach', team.coach.handle, team.city, team.club, 'Head Coach'),
+    ...team.players.map((p) =>
+      seedUser(p.email, p.displayName, 'player', p.handle, team.city, team.club, p.position),
+    ),
+  ]),
 ];
 
 const BADGES = [
@@ -301,14 +356,6 @@ const CHALLENGES: ChallengeSeed[] = [
   ),
 ];
 
-const TEAM = { id: 'team-falcons', name: 'Zporter Falcons U19' };
-const TEAM_MEMBER_EMAILS = [
-  'coach@zporter.test',
-  'player1@zporter.test',
-  'player2@zporter.test',
-  'player3@zporter.test',
-];
-
 async function seed(): Promise<void> {
   const logger = new Logger('seed');
   const app = await NestFactory.createApplicationContext(AppModule, {
@@ -381,29 +428,39 @@ async function seed(): Promise<void> {
     );
     logger.log(`upserted ${CHALLENGES.length} demo challenges`);
 
-    // --- Team + membership join ---
-    await db.collection('teams').doc(TEAM.id).set({
-      name: TEAM.name,
-      coachId,
-      createdAt: now,
-    });
-    await Promise.all(
-      TEAM_MEMBER_EMAILS.map((email) => {
-        const userId = idByEmail[email];
-        return db
-          .collection('teams')
-          .doc(TEAM.id)
-          .collection('members')
-          .doc(userId)
-          .set({
-            userId,
-            teamId: TEAM.id,
-            role: email === 'coach@zporter.test' ? 'coach' : 'player',
-            joinedAt: now,
-          });
-      }),
-    );
-    logger.log(`upserted team "${TEAM.name}" with ${TEAM_MEMBER_EMAILS.length} members`);
+    // --- Teams + membership join (coach + 3 players each) ---
+    // Drop the pre-3-squad seed's single team so the directory shows exactly
+    // the current TEAMS (Firestore keeps orphaned docs otherwise).
+    const legacyTeam = db.collection('teams').doc('team-falcons');
+    const legacyMembers = await legacyTeam.collection('members').get();
+    await Promise.all([
+      ...legacyMembers.docs.map((d) => d.ref.delete()),
+      legacyTeam.delete(),
+    ]);
+
+    for (const team of TEAMS) {
+      const teamCoachId = idByEmail[team.coach.email];
+      await db.collection('teams').doc(team.id).set({
+        name: team.name,
+        coachId: teamCoachId,
+        createdAt: now,
+      });
+      const members = [
+        { userId: teamCoachId, role: 'coach' as const },
+        ...team.players.map((p) => ({ userId: idByEmail[p.email], role: 'player' as const })),
+      ];
+      await Promise.all(
+        members.map((m) =>
+          db
+            .collection('teams')
+            .doc(team.id)
+            .collection('members')
+            .doc(m.userId)
+            .set({ userId: m.userId, teamId: team.id, role: m.role, joinedAt: now }),
+        ),
+      );
+      logger.log(`upserted team "${team.name}" with ${members.length} members`);
+    }
 
     logger.log(`done. all demo accounts use password "${PASSWORD}".`);
   } finally {

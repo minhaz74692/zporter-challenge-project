@@ -5,7 +5,7 @@ import {
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
-import type { InviteState, Participant, UserSummary } from '@zporter/shared';
+import type { Badge, InviteState, Participant, UserSummary } from '@zporter/shared';
 import { FieldValue, type Firestore } from 'firebase-admin/firestore';
 import { FIRESTORE } from '../firebase/firebase.constants.js';
 import { participantFromDoc } from './participant.mapper.js';
@@ -64,6 +64,19 @@ export class ParticipantsRepository {
       'submittedResult.verified': verified,
       'submittedResult.verifiedAt': new Date().toISOString(),
     });
+  }
+
+  /**
+   * Grant a recognition badge to a participant (denormalised id + name + icon).
+   * Called once, after a result is approved — the service guards against
+   * re-awarding.
+   */
+  async awardBadge(
+    challengeId: string,
+    userId: string,
+    badge: Badge,
+  ): Promise<void> {
+    await this.col(challengeId).doc(userId).update({ awardedBadge: badge });
   }
 
   async listByChallenge(challengeId: string): Promise<Participant[]> {

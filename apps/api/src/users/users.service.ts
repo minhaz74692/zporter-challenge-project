@@ -99,6 +99,18 @@ export class UsersService {
     const rows = await this.repo.search(query);
     return rows.map(toUserSummary);
   }
+
+  /**
+   * The caller's club-mates — the prototype's stand-in for "friends", used by
+   * the player app to nominate a result controller. Empty if the user has no
+   * club set.
+   */
+  async teammates(userId: string): Promise<UserSummary[]> {
+    const me = await this.getById(userId);
+    if (!me.club) return [];
+    const mates = await this.repo.listByClub(me.club, userId);
+    return mates.map(toUserSummary);
+  }
 }
 
 function normalizeEmail(email: string): string {

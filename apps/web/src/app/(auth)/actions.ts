@@ -35,15 +35,18 @@ export async function signup(_prev: FormState, fd: FormData): Promise<FormState>
   const email = str(fd, 'email');
   const password = str(fd, 'password');
   const displayName = str(fd, 'displayName');
-  if (!email || !password || !displayName) {
+  const teamName = str(fd, 'teamName');
+  if (!email || !password || !displayName || !teamName) {
     return { error: 'All fields are required.' };
   }
 
   let auth: AuthResponse;
   try {
+    // Creator signup is a team account: the API creates the squad the new
+    // coach owns, so `teamName` is required alongside the coach's own details.
     auth = await api<AuthResponse>('/auth/signup', {
       auth: false,
-      body: { email, password, displayName, role: 'coach' },
+      body: { email, password, displayName, role: 'coach', teamName },
     });
   } catch (e) {
     return { error: e instanceof ApiError ? e.message : 'Could not create the account.' };

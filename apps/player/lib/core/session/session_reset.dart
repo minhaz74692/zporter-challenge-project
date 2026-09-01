@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../features/auth/application/auth_notifier.dart';
 import '../../features/challenges/application/challenge_detail_provider.dart';
 import '../../features/challenges/application/challenge_filter_provider.dart';
-import '../../features/challenges/application/challenge_list_provider.dart';
 import '../../features/notifications/application/notifications_provider.dart';
 
 /// Watched once at the app root. When the signed-in user changes — sign-out, or
@@ -15,7 +14,8 @@ final sessionResetProvider = Provider<void>((ref) {
     authNotifierProvider.select((s) => s.valueOrNull?.id),
     (previousUserId, nextUserId) {
       if (previousUserId == nextUserId) return;
-      ref.invalidate(challengeListProvider);
+      // challengeListProvider watches the auth user itself, so it rebuilds on
+      // this change without help — the rest still need a nudge.
       ref.invalidate(challengeDetailProvider);
       ref.invalidate(challengeParticipantsProvider);
       ref.invalidate(challengeLeaderboardProvider);

@@ -7,6 +7,7 @@ class SubmitResultRequest {
     required this.controllerRef,
     this.arena,
     this.note,
+    this.shareToFeed = false,
   });
 
   /// `num` for count/time/score, `bool` for boolean, `String` for text.
@@ -19,6 +20,9 @@ class SubmitResultRequest {
   final String? arena;
   final String? note;
 
+  /// "Share to my feed" concept toggle — sent through, no feed pipeline yet.
+  final bool shareToFeed;
+
   Map<String, dynamic> toJson() => {
     'value': value,
     'videoUrl': videoUrl,
@@ -26,5 +30,6 @@ class SubmitResultRequest {
     'controllerRef': controllerRef,
     if (arena != null && arena!.isNotEmpty) 'arena': arena,
     if (note != null && note!.isNotEmpty) 'note': note,
+    if (shareToFeed) 'shareToFeed': true,
   };
 }
