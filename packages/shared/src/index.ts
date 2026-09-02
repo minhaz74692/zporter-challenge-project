@@ -18,3 +18,4 @@ export * from './challenge.js';
 export * from './participant.js';
 export * from './result.js';
 export * from './notification.js';
+export * from './feed.js';

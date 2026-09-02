@@ -1,4 +1,6 @@
 import type { IsoDateTime } from './common.js';
+import type { Challenge } from './challenge.js';
+import type { SubmittedResult } from './participant.js';
 
 /** Body of `POST /challenges/:id/results` (Figma "Add result" form). */
 export interface SubmitResultRequest {
@@ -18,6 +20,16 @@ export interface SubmitResultRequest {
    * no feed pipeline in this slice (documented as a next step).
    */
   shareToFeed?: boolean;
+}
+
+/**
+ * One entry of `GET /challenges/mine/results` — the caller's reported result on
+ * a challenge, with the challenge it belongs to. Backs the Biography
+ * "Challenges" tab.
+ */
+export interface ChallengeResultEntry {
+  challenge: Challenge;
+  result: SubmittedResult;
 }
 
 /** One row of `GET /challenges/:id/leaderboard` (denormalised, §6). */

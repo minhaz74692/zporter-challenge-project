@@ -9,6 +9,7 @@ import type {
   Challenge,
   ChallengeCategory,
   ChallengeDetail,
+  ChallengeResultEntry,
   LeaderboardEntry,
   MediaItem,
   Participant,
@@ -24,6 +25,7 @@ import {
   toYoutubeItem,
 } from './media.util.js';
 import { BadgesService } from '../badges/badges.service.js';
+import { FeedService } from '../feed/feed.service.js';
 import { notificationCopy } from '../notifications/notification-copy.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { ParticipantsRepository } from '../participants/participants.repository.js';
@@ -57,6 +59,7 @@ export class ChallengesService {
     private readonly results: ResultsService,
     private readonly notifications: NotificationsService,
     private readonly badges: BadgesService,
+    private readonly feed: FeedService,
     private readonly storage: StorageService,
     private readonly templates: TemplatesService,
     private readonly teams: TeamsService,
@@ -90,7 +93,12 @@ export class ChallengesService {
     if (launchInvites.length > 0) {
       await this.writeInvites(challenge, launchInvites);
     }
-    return this.withCreator(challenge);
+
+    const withCreator = await this.withCreator(challenge);
+    // Every launch shows up in the activity feed — `all` publicly, otherwise
+    // scoped to the creator's squad (best-effort).
+    await this.feed.publishChallenge(withCreator);
+    return withCreator;
   }
 
   /** Edit an existing challenge (owner or admin). Full-form PATCH from the web. */
@@ -144,6 +152,8 @@ export class ChallengesService {
   async remove(id: string, user: AuthenticatedUser): Promise<void> {
     await this.requireOwned(id, user);
     await this.repo.delete(id);
+    // Don't leave feed posts pointing at a challenge that no longer opens.
+    await this.feed.removeForChallenge(id);
   }
 
   async invite(
@@ -210,6 +220,11 @@ export class ChallengesService {
       });
     }
 
+    // "Share to my feed" was ticked on the report form (best-effort).
+    if (dto.shareToFeed) {
+      await this.feed.publishResult(challenge, participant);
+    }
+
     return participant;
   }
 
@@ -271,7 +286,18 @@ export class ChallengesService {
       ...(approved ? {} : { title: 'Your result was not approved' }),
     });
 
-    return (await this.participants.findOne(challengeId, subjectUserId))!;
+    const updated = (await this.participants.findOne(challengeId, subjectUserId))!;
+
+    // A witnessed (approved) result belongs on the feed — publish it now, or
+    // refresh the existing card with the freshly-earned badge. A rejection
+    // pulls any shared post back down.
+    if (approved) {
+      await this.feed.publishResult(this.withComputedStatus(challenge), updated);
+    } else {
+      await this.feed.removeResultPost(challengeId, subjectUserId);
+    }
+
+    return updated;
   }
 
   /**
@@ -333,6 +359,35 @@ export class ChallengesService {
   async listMine(userId: string): Promise<Challenge[]> {
     const challenges = await this.repo.listByCreator(userId);
     return this.withCreators(challenges.map((c) => this.withComputedStatus(c)));
+  }
+
+  /**
+   * Every result the caller has reported, paired with its challenge, newest
+   * first — the Biography "Challenges" tab.
+   */
+  async listMyResults(userId: string): Promise<ChallengeResultEntry[]> {
+    const parts = (await this.participants.listByUser(userId)).filter(
+      (p) => p.submittedResult,
+    );
+    if (parts.length === 0) return [];
+
+    const challenges = new Map(
+      (await this.repo.findManyByIds(parts.map((p) => p.challengeId))).map((c) => [
+        c.id,
+        c,
+      ]),
+    );
+    const withCreators = await this.withCreators(
+      [...challenges.values()].map((c) => this.withComputedStatus(c)),
+    );
+    const byId = new Map(withCreators.map((c) => [c.id, c]));
+
+    return parts
+      .filter((p) => byId.has(p.challengeId))
+      .map((p) => ({ challenge: byId.get(p.challengeId)!, result: p.submittedResult! }))
+      .sort((a, b) =>
+        b.result.submittedAt.localeCompare(a.result.submittedAt),
+      );
   }
 
   async getDetail(

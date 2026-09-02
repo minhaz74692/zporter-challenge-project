@@ -1,5 +1,19 @@
 import type { IsoDateTime, UserRole } from './common.js';
 
+/** Preferred foot (Biography). */
+export type PreferredFoot = 'left' | 'right' | 'both';
+
+/** Outbound social links shown on the Biography screen. All optional URLs. */
+export interface SocialLinks {
+  instagram?: string;
+  facebook?: string;
+  twitter?: string;
+  whatsapp?: string;
+  youtube?: string;
+  tiktok?: string;
+  veo?: string;
+}
+
 /** Public user shape — what `GET /auth/me` returns. */
 export interface User {
   id: string;
@@ -15,6 +29,23 @@ export interface User {
   /** Playing position, e.g. `FW`, `CM`, `GK`. */
   position?: string;
   createdAt: IsoDateTime;
+
+  // --- Biography profile (all optional; only the player screen uses them) ---
+  /** ISO date — the screen derives age + shows it as the birth date. */
+  birthDate?: IsoDateTime;
+  heightCm?: number;
+  weightKg?: number;
+  foot?: PreferredFoot;
+  /** Free text so `"? M€"` renders verbatim (Figma). */
+  marketValue?: string;
+  /** Short scouting-style blurb under the profile card. */
+  bio?: string;
+  /** 0–100 — the star row + "NN%" under the avatar. */
+  ratingPercent?: number;
+  friendsCount?: number;
+  fansCount?: number;
+  followsCount?: number;
+  socials?: SocialLinks;
 }
 
 /** Trimmed user shape embedded in challenge / participant / leaderboard rows. */

@@ -26,6 +26,7 @@ import { SetMediaDto } from './dto/set-media.dto.js';
 import type {
   Challenge,
   ChallengeDetail,
+  ChallengeResultEntry,
   LeaderboardEntry,
   Participant,
 } from '@zporter/shared';
@@ -60,6 +61,14 @@ export class ChallengesController {
   @Roles('coach', 'admin')
   mine(@CurrentUser() user: AuthenticatedUser): Promise<Challenge[]> {
     return this.challenges.listMine(user.userId);
+  }
+
+  /** The caller's reported results, newest first — Biography "Challenges" tab. */
+  @Get('mine/results')
+  myResults(
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<ChallengeResultEntry[]> {
+    return this.challenges.listMyResults(user.userId);
   }
 
   @Get(':id')

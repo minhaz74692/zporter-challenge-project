@@ -128,6 +128,17 @@ export class UsersRepository {
       club: data.club,
       position: data.position,
       createdAt: data.createdAt,
+      birthDate: data.birthDate,
+      heightCm: data.heightCm,
+      weightKg: data.weightKg,
+      foot: data.foot,
+      marketValue: data.marketValue,
+      bio: data.bio,
+      ratingPercent: data.ratingPercent,
+      friendsCount: data.friendsCount,
+      fansCount: data.fansCount,
+      followsCount: data.followsCount,
+      socials: data.socials,
     };
   }
 }

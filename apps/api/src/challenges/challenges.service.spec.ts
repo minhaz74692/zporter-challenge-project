@@ -85,6 +85,12 @@ function build() {
     rebuildLeaderboard: vi.fn(async () => undefined),
   };
   const notifications = { notify: vi.fn(async () => undefined) };
+  const feed = {
+    publishChallenge: vi.fn(async () => undefined),
+    publishResult: vi.fn(async () => undefined),
+    removeForChallenge: vi.fn(async () => undefined),
+    removeResultPost: vi.fn(async () => undefined),
+  };
   const badges = {
     getById: vi.fn(async (id: string) => ({
       id,
@@ -123,12 +129,13 @@ function build() {
     results as unknown as ResultsService,
     notifications as unknown as NotificationsService,
     badges as unknown as BadgesService,
+    feed as unknown as import('../feed/feed.service.js').FeedService,
     storage as unknown as import('../storage/storage.service.js').StorageService,
     templates as unknown as TemplatesService,
     teams as unknown as TeamsService,
     users as unknown as UsersService,
   );
-  return { service, repo, participants, participation, results, notifications, badges, storage, users, challenges, parts };
+  return { service, repo, participants, participation, results, notifications, feed, badges, storage, users, challenges, parts };
 }
 
 describe('ChallengesService', () => {

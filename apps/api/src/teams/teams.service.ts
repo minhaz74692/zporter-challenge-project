@@ -57,6 +57,24 @@ export class TeamsService {
     return members.filter((m) => m.role !== 'coach').map((m) => m.userId);
   }
 
+  /**
+   * Every distinct user id that shares at least one squad with `userId`
+   * (the user themselves excluded). Backs the feed "Team" tab. Prototype
+   * scale — walks every squad in memory rather than a collection-group query.
+   */
+  async squadmateIds(userId: string): Promise<Set<string>> {
+    const teams = await this.repo.listAll();
+    const ids = new Set<string>();
+    for (const team of teams) {
+      const members = await this.repo.listMembers(team.id);
+      if (!members.some((m) => m.userId === userId)) continue;
+      for (const member of members) {
+        if (member.userId !== userId) ids.add(member.userId);
+      }
+    }
+    return ids;
+  }
+
   /** Every member id across all squads the coach owns — invite scoping. */
   async squadPlayerIds(coachId: string): Promise<Set<string>> {
     const teams = await this.repo.listByCoach(coachId);

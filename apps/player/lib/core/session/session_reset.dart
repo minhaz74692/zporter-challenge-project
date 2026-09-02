@@ -1,8 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/auth/application/auth_notifier.dart';
+import '../../features/biography/application/biography_results_provider.dart';
 import '../../features/challenges/application/challenge_detail_provider.dart';
 import '../../features/challenges/application/challenge_filter_provider.dart';
+import '../../features/feed/application/feed_provider.dart';
 import '../../features/notifications/application/notifications_provider.dart';
 
 /// Watched once at the app root. When the signed-in user changes — sign-out, or
@@ -20,6 +22,8 @@ final sessionResetProvider = Provider<void>((ref) {
       ref.invalidate(challengeParticipantsProvider);
       ref.invalidate(challengeLeaderboardProvider);
       ref.invalidate(challengeFilterProvider);
+      ref.invalidate(feedProvider);
+      ref.invalidate(biographyResultsProvider);
       ref.invalidate(notificationsProvider);
     },
   );
