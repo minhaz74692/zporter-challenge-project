@@ -23,13 +23,7 @@ import {
 const RESULT_TYPES: ResultType[] = ['count', 'time', 'boolean', 'score', 'text', 'proof'];
 const RESULT_UNITS: ResultUnit[] = ['reps', 'count', 'seconds', 'kg', 'meters', 'points', 'boolean'];
 const SCORING: ScoringDirection[] = ['higher_better', 'lower_better'];
-const VISIBILITY: ChallengeVisibility[] = [
-  'private',
-  'team',
-  'friends',
-  'fans',
-  'all',
-];
+const VISIBILITY: ChallengeVisibility[] = ['private', 'friends', 'fans', 'all'];
 const MAIN_CATEGORIES: ChallengeMainCategory[] = [
   'physical',
   'technical',

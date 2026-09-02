@@ -23,13 +23,12 @@ describe('challenge form option lists', () => {
     ]);
   });
 
-  it('offers the visibility levels, "all" last', () => {
+  it('offers the four visibility levels available to any creator', () => {
     expect(VISIBILITIES.map((o) => o.value)).toEqual([
       'private',
-      'team',
+      'all',
       'friends',
       'fans',
-      'all',
     ]);
   });
 

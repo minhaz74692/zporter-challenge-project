@@ -78,6 +78,22 @@ export class FeedRepository {
     await Promise.all(snap.docs.map((d) => d.ref.delete()));
   }
 
+  /**
+   * Refresh the embedded `challenge` snapshot on the launch post (media added
+   * after launch, an edited title, …). The snapshot is denormalised, so it goes
+   * stale unless every challenge write re-syncs it here.
+   */
+  async updateChallengeSnapshot(challenge: Challenge): Promise<void> {
+    const snap = await this.posts
+      .where('challengeId', '==', challenge.id)
+      .get();
+    await Promise.all(
+      snap.docs
+        .filter((d) => d.get('type') === 'challenge_published')
+        .map((d) => d.ref.set({ challenge }, { merge: true })),
+    );
+  }
+
   private async write(
     id: string,
     data: NewFeedPost,

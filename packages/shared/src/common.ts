@@ -26,18 +26,12 @@ export type MediaKind = 'image' | 'video' | 'youtube';
 export type ChallengeStatus = 'draft' | 'active' | 'ended';
 
 /**
- * Figma "Share with". `private` — invite-only (the coach flow). `team` — every
- * member of the creator's squad(s) sees it in New with no individual invite
- * (any coach/admin may use it). `all` — every player on the platform sees it in
- * New (admin CMS "global" push). `friends` / `fans` are audience buckets that
- * behave like `private` in this slice (no relationship graph yet).
+ * Figma "Share with". `private` — invite-only. `all` — every player sees it in
+ * New with no invite (any coach/admin may use it). `friends` / `fans` are
+ * audience buckets that behave like `private` in this slice (no relationship
+ * graph yet).
  */
-export type ChallengeVisibility =
-  | 'private'
-  | 'team'
-  | 'friends'
-  | 'fans'
-  | 'all';
+export type ChallengeVisibility = 'private' | 'friends' | 'fans' | 'all';
 
 /** Figma "Main Category" (single-select on the create form). */
 export type ChallengeMainCategory =

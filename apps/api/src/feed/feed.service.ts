@@ -170,6 +170,21 @@ export class FeedService {
     }
   }
 
+  /**
+   * Re-sync the launch post's embedded challenge after any challenge write
+   * (media uploaded/reordered after launch, an edited field, …). Best-effort.
+   */
+  async syncChallenge(challenge: Challenge): Promise<void> {
+    try {
+      await this.repo.updateChallengeSnapshot(challenge);
+    } catch (err) {
+      this.logger.error(
+        `Could not sync feed snapshot for challenge ${challenge.id}`,
+        err as Error,
+      );
+    }
+  }
+
   /** Remove a challenge's posts (called when the challenge is deleted). */
   async removeForChallenge(challengeId: string): Promise<void> {
     try {

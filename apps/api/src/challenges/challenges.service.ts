@@ -68,9 +68,6 @@ export class ChallengesService {
 
   async create(dto: CreateChallengeDto, creator: AuthenticatedUser): Promise<Challenge> {
     const visibility = dto.visibility ?? 'private';
-    if (visibility === 'all' && creator.role !== 'admin') {
-      throw new ForbiddenException('Only admins can publish a challenge to everyone');
-    }
     if (Date.parse(dto.deadline) <= Date.parse(dto.startAt)) {
       throw new BadRequestException('deadline must be after startAt');
     }
@@ -108,9 +105,6 @@ export class ChallengesService {
     user: AuthenticatedUser,
   ): Promise<Challenge> {
     const challenge = await this.requireOwned(id, user);
-    if (dto.visibility === 'all' && user.role !== 'admin') {
-      throw new ForbiddenException('Only admins can publish a challenge to everyone');
-    }
 
     const startAt = dto.startAt ?? challenge.startAt;
     const deadline = dto.deadline ?? challenge.deadline;
@@ -145,7 +139,9 @@ export class ChallengesService {
     });
 
     await this.repo.updateFields(id, patch);
-    return this.withCreator({ ...challenge, ...patch });
+    const updated = await this.withCreator({ ...challenge, ...patch });
+    await this.feed.syncChallenge(updated);
+    return updated;
   }
 
   /** Delete a challenge (owner or admin). */
@@ -343,17 +339,8 @@ export class ChallengesService {
 
     const challenges = await this.repo.findManyByIds([...partByChallenge.keys()]);
     if (category === 'new') {
-      // Challenges the player can see in New without an invite: `all` (every
-      // player) + `team` challenges created by one of the player's squad-mates.
-      const squadmates = await this.teams.squadmateIds(userId);
-      const noInvite = [
-        ...(await this.repo.listPublic()),
-        ...(await this.repo.listTeamVisible()).filter((c) =>
-          squadmates.has(c.createdBy),
-        ),
-      ];
-      for (const challenge of noInvite) {
-        if (!partByChallenge.has(challenge.id)) challenges.push(challenge);
+      for (const publicChallenge of await this.repo.listPublic()) {
+        if (!partByChallenge.has(publicChallenge.id)) challenges.push(publicChallenge);
       }
     }
 
@@ -512,12 +499,16 @@ export class ChallengesService {
   ): Promise<Challenge> {
     await this.repo.updateFields(challenge.id, { media });
     const legacy = deriveLegacy(media);
-    return this.withCreator({
+    const updated = await this.withCreator({
       ...challenge,
       media,
       mediaImageUrl: legacy.mediaImageUrl ?? undefined,
       mediaVideoUrl: legacy.mediaVideoUrl ?? undefined,
     });
+    // The feed embeds a snapshot taken at launch — keep its cover in sync when
+    // media is added / reordered afterwards.
+    await this.feed.syncChallenge(updated);
+    return updated;
   }
 
   /**
@@ -609,11 +600,9 @@ export class ChallengesService {
     switch (category) {
       case 'new':
         if (ended) return false;
-        // No participant row → it's a no-invite challenge (`all`, or a `team`
-        // challenge already filtered to the viewer's squad in `listByCategory`).
         return participant
           ? participant.inviteState === 'invited'
-          : challenge.visibility === 'all' || challenge.visibility === 'team';
+          : challenge.visibility === 'all';
       case 'active':
         return (
           !ended &&

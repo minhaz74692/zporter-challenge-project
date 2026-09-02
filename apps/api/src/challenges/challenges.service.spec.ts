@@ -53,7 +53,6 @@ function build() {
     findById: vi.fn(async (id: string) => challenges.find((c) => c.id === id) ?? null),
     findManyByIds: vi.fn(async (ids: string[]) => challenges.filter((c) => ids.includes(c.id))),
     listPublic: vi.fn(async () => challenges.filter((c) => c.visibility === 'all')),
-    listTeamVisible: vi.fn(async () => challenges.filter((c) => c.visibility === 'team')),
     leaderboard: vi.fn(async () => []),
     updateFields: vi.fn(async (id: string, patch: Partial<Challenge>) => {
       const c = challenges.find((x) => x.id === id);
@@ -89,6 +88,7 @@ function build() {
   const feed = {
     publishChallenge: vi.fn(async () => undefined),
     publishResult: vi.fn(async () => undefined),
+    syncChallenge: vi.fn(async () => undefined),
     removeForChallenge: vi.fn(async () => undefined),
     removeResultPost: vi.fn(async () => undefined),
   };
@@ -116,7 +116,6 @@ function build() {
     // Team fan-out excludes the coach; the coach's squad for invite scoping.
     invitableMemberIds: vi.fn(async () => ['player1', 'player2', 'player3']),
     squadPlayerIds: vi.fn(async () => new Set(['player1', 'player2', 'player3'])),
-    squadmateIds: vi.fn(async () => new Set(['coach1', 'player1', 'player2', 'player3'])),
   };
   const users = {
     summaryById: vi.fn(async (id: string) => makeUserSummary({ id, displayName: `User ${id}` })),
@@ -149,13 +148,15 @@ describe('ChallengesService', () => {
   describe('create', () => {
     const dates = { startAt: PAST, deadline: FUTURE };
 
-    it('blocks a non-admin from publishing to everyone (visibility: all)', async () => {
-      await expect(
-        ctx.service.create({ ...dates, visibility: 'all', templateId: 't' } as never, coach),
-      ).rejects.toBeInstanceOf(ForbiddenException);
+    it('lets a coach publish to everyone (visibility: all)', async () => {
+      const c = await ctx.service.create(
+        { ...dates, visibility: 'all', templateId: 't' } as never,
+        coach,
+      );
+      expect(c.visibility).toBe('all');
     });
 
-    it('allows an admin to publish to everyone', async () => {
+    it('lets an admin publish to everyone', async () => {
       const c = await ctx.service.create(
         { ...dates, visibility: 'all', templateId: 't' } as never,
         admin,
@@ -243,11 +244,10 @@ describe('ChallengesService', () => {
       ).rejects.toBeInstanceOf(ForbiddenException);
     });
 
-    it('blocks a non-admin from switching visibility to all', async () => {
+    it('lets the owning coach switch visibility to all', async () => {
       const c = await ctx.service.create({ startAt: PAST, deadline: FUTURE, templateId: 't' } as never, coach);
-      await expect(
-        ctx.service.update(c.id, { visibility: 'all' } as never, coach),
-      ).rejects.toBeInstanceOf(ForbiddenException);
+      const updated = await ctx.service.update(c.id, { visibility: 'all' } as never, coach);
+      expect(updated.visibility).toBe('all');
     });
 
     it('validates deadline against the stored startAt when only deadline changes', async () => {

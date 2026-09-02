@@ -57,14 +57,12 @@ const sectionLabel = 'mb-2 block pl-1 text-[11px] font-medium text-faint';
 export function CreateChallengeForm({
   prefill,
   onSubmit,
-  canPublishToAll = false,
   heading = 'Create Challenge',
   submitLabel = 'Save & Publish',
   pendingLabel = 'Publishing…',
 }: {
   prefill: ChallengePrefill | null;
   onSubmit: (prev: CreateState, fd: FormData) => Promise<CreateState>;
-  canPublishToAll?: boolean;
   heading?: string;
   submitLabel?: string;
   pendingLabel?: string;
@@ -75,14 +73,12 @@ export function CreateChallengeForm({
   const start = p?.startAt ? splitIso(p.startAt) : iso(0);
   const end = p?.deadline ? splitIso(p.deadline) : iso(14);
 
-  // "All" (global) is admin-only server-side — don't offer it to a coach.
-  const shareOptions = canPublishToAll
-    ? VISIBILITIES
-    : VISIBILITIES.filter((v) => v.value !== 'all');
+  // Coach and admin have the same "Share with" options.
+  const shareOptions = VISIBILITIES;
 
-  // Editing a challenge whose current audience the user can't set (a coach on
-  // an admin's global challenge): show it read-only and submit no `visibility`
-  // field, so the PATCH leaves it untouched instead of silently downgrading it.
+  // Editing a challenge whose current audience isn't one of the standard
+  // options (e.g. a legacy value): show it read-only and submit no `visibility`
+  // field so the PATCH leaves it untouched.
   const lockedVisibility =
     p?.visibility && !shareOptions.some((o) => o.value === p.visibility)
       ? VISIBILITIES.find((v) => v.value === p.visibility)
@@ -336,35 +332,20 @@ export function CreateChallengeForm({
               <div>
                 <span className={sectionLabel}>Share with</span>
                 {lockedVisibility ? (
-                  <>
-                    <div className="rounded-[var(--radius-control)] bg-field/80 px-3.5 py-2.5 text-[13px] text-fg ring-1 ring-white/[0.04]">
-                      {lockedVisibility.label}
-                    </div>
-                    <p className="mt-1 pl-1 text-[11px] text-faint">
-                      This challenge is published to everyone (admin-only) — editing
-                      here keeps that unchanged.
-                    </p>
-                  </>
+                  <div className="rounded-[var(--radius-control)] bg-field/80 px-3.5 py-2.5 text-[13px] text-fg ring-1 ring-white/[0.04]">
+                    {lockedVisibility.label}
+                  </div>
                 ) : (
-                  <>
-                    <Segmented
-                      name="visibility"
-                      options={shareOptions}
-                      defaultValue={
-                        shareOptions.some((o) => o.value === p?.visibility)
-                          ? p!.visibility!
-                          : 'private'
-                      }
-                      columns={Math.min(shareOptions.length, 5)}
-                    />
-                    <p className="mt-1 pl-1 text-[11px] text-faint">
-                      Private keeps it to the people you invite. “Team” shares it
-                      with every member of your squad — no invites needed.
-                      {canPublishToAll
-                        ? ' “All” publishes it to every player on the platform.'
-                        : ''}
-                    </p>
-                  </>
+                  <Segmented
+                    name="visibility"
+                    options={shareOptions}
+                    defaultValue={
+                      shareOptions.some((o) => o.value === p?.visibility)
+                        ? p!.visibility!
+                        : 'private'
+                    }
+                    columns={shareOptions.length}
+                  />
                 )}
               </div>
             </div>

@@ -48,5 +48,7 @@ app.*.map.json
 /config/local.json
 
 # Firebase per-project config (add locally; see apps/player/FCM_SETUP.md)
-apps/player/android/app/google-services.json
-apps/player/ios/Runner/GoogleService-Info.plist
+# Paths are relative to this file's dir (apps/player/) — the earlier
+# repo-root-style paths never matched, which leaked the API key.
+/android/app/google-services.json
+/ios/Runner/GoogleService-Info.plist
