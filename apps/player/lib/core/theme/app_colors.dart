@@ -61,5 +61,12 @@ abstract final class AppColors {
   /// The purple row index on the participants list (Figma #C05BFF).
   static const indexLavender = Color(0xFFC05BFF);
 
+  // Biography rating ring — Figma "Subtraction 7" linear-gradient(180deg).
+  static const bioRingStart = Color(0xFF4150FB); // top
+  static const bioRingEnd = Color(0xFF9D4AFF); // bottom
+
+  /// Dim page / card ground (Figma #121519) — Biography screen + its result cards.
+  static const surfaceDim = Color(0xFF121519);
+
   static const onPrimary = Color(0xFFFFFFFF);
 }

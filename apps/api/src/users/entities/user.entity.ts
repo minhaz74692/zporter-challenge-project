@@ -1,4 +1,10 @@
-import type { User, UserRole, UserSummary } from '@zporter/shared';
+import type {
+  PreferredFoot,
+  SocialLinks,
+  User,
+  UserRole,
+  UserSummary,
+} from '@zporter/shared';
 
 /**
  * Internal user representation as stored in Firestore (`users/{id}`). Includes
@@ -19,6 +25,18 @@ export interface UserRecord {
   position?: string;
   /** ISO-8601; the repository converts to/from Firestore types. */
   createdAt: string;
+  // --- Biography profile (optional; see @zporter/shared `User`) ---
+  birthDate?: string;
+  heightCm?: number;
+  weightKg?: number;
+  foot?: PreferredFoot;
+  marketValue?: string;
+  bio?: string;
+  ratingPercent?: number;
+  friendsCount?: number;
+  fansCount?: number;
+  followsCount?: number;
+  socials?: SocialLinks;
 }
 
 /** Fields the repository writes (id = doc id, createdAt/handle set on create). */

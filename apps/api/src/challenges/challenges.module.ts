@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { BadgesModule } from '../badges/badges.module.js';
+import { FeedModule } from '../feed/feed.module.js';
 import { NotificationsModule } from '../notifications/notifications.module.js';
 import { ParticipantsModule } from '../participants/participants.module.js';
 import { ResultsModule } from '../results/results.module.js';
@@ -16,6 +17,7 @@ import { ChallengesService } from './challenges.service.js';
     ResultsModule,
     NotificationsModule,
     BadgesModule,
+    FeedModule,
     TemplatesModule,
     TeamsModule,
     UsersModule,

@@ -43,3 +43,8 @@ ASSIGNMENT_BRIEF.md
 figma-findings.md
 cloud-run-plan.md
 cloud-run-deploy.md
+apps/api/src/scripts/
+
+# Generated submission documentation (kept local; docs/figma/ assets stay tracked)
+docs/*.md
+*.docx

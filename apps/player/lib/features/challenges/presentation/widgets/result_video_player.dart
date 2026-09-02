@@ -28,12 +28,29 @@ class ResultVideoPlayer extends StatefulWidget {
     required this.url,
     this.height = 220,
     this.fullBleed = false,
+    this.autoPlay = false,
+    this.tapTogglesPlayback = false,
+    this.dimBackground = true,
     super.key,
   });
 
   final String url;
   final double height;
   final bool fullBleed;
+
+  /// Start playing as soon as the video is ready (the feed card taps its own
+  /// play button, then wants playback to begin in place).
+  final bool autoPlay;
+
+  /// A single tap on the video pauses / resumes it (Instagram-style), instead of
+  /// just toggling the control overlay. Used for inline card playback.
+  final bool tapTogglesPlayback;
+
+  /// Paint a black backdrop. Keep `true` for the standalone / fullscreen player;
+  /// set `false` for inline card playback so whatever is stacked behind (the
+  /// cover poster) shows through until the first video frame arrives — and stays
+  /// visible where the platform can't decode video at all (iOS Simulator).
+  final bool dimBackground;
 
   @override
   State<ResultVideoPlayer> createState() => _ResultVideoPlayerState();
@@ -59,6 +76,7 @@ class _ResultVideoPlayerState extends State<ResultVideoPlayer> {
         return;
       }
       setState(() => _controller = controller);
+      if (widget.autoPlay) await controller.play();
     } catch (_) {
       // Codec failure, an unreachable URL, or (on an emulator) the platform
       // plugin never connecting — all degrade to the "unavailable" placeholder.
@@ -109,14 +127,19 @@ class _ResultVideoPlayerState extends State<ResultVideoPlayer> {
       inner = _VideoSurface(
         controller: c,
         fit: BoxFit.cover,
+        tapTogglesPlayback: widget.tapTogglesPlayback,
         onFullscreen: () => _openFullscreen(c),
       );
     }
 
+    // `dimBackground: false` keeps the backdrop transparent so a poster stacked
+    // behind us shows through until the first video frame arrives.
+    final backdrop = widget.dimBackground ? Colors.black : Colors.transparent;
     final frame = ClipRRect(
-      borderRadius:
-          widget.fullBleed ? BorderRadius.zero : BorderRadius.circular(12),
-      child: ColoredBox(color: Colors.black, child: inner),
+      borderRadius: widget.fullBleed
+          ? BorderRadius.zero
+          : BorderRadius.circular(12),
+      child: ColoredBox(color: backdrop, child: inner),
     );
 
     if (!widget.fullBleed) {
@@ -152,12 +175,16 @@ class _VideoSurface extends StatefulWidget {
     required this.fit,
     this.onFullscreen,
     this.isFullscreen = false,
+    this.tapTogglesPlayback = false,
   });
 
   final VideoPlayerController controller;
   final BoxFit fit;
   final VoidCallback? onFullscreen;
   final bool isFullscreen;
+
+  /// A tap on the surface pauses / resumes rather than toggling the overlay.
+  final bool tapTogglesPlayback;
 
   @override
   State<_VideoSurface> createState() => _VideoSurfaceState();
@@ -204,10 +231,58 @@ class _VideoSurfaceState extends State<_VideoSurface> {
     if (_visible) _scheduleHide();
   }
 
+  void _togglePlayback() {
+    final c = widget.controller;
+    c.value.isPlaying ? c.pause() : c.play();
+    setState(() {}); // immediate glyph feedback, don't wait on the notifier
+  }
+
+  Widget _fit(Widget player, Size size) => FittedBox(
+    fit: widget.fit,
+    clipBehavior: Clip.hardEdge,
+    child: SizedBox(
+      width: size.width <= 0 ? 16 : size.width,
+      height: size.height <= 0 ? 9 : size.height,
+      child: player,
+    ),
+  );
+
   @override
   Widget build(BuildContext context) {
     final c = widget.controller;
-    final size = c.value.size;
+    // Built once per surface build and shared across the notifier rebuilds
+    // below — recreating `VideoPlayer` mid-stream (or pulling it out of the
+    // tree) blanks the iOS texture and it does not always come back.
+    final player = VideoPlayer(c);
+
+    // Inline card mode: no control bar. The whole surface is one opaque tap
+    // target that pauses / resumes; a centred glyph marks the paused state. The
+    // texture stays mounted the whole time (transparent until the first frame,
+    // so the poster stacked behind shows through) and holds the last frame when
+    // paused.
+    if (widget.tapTogglesPlayback) {
+      return GestureDetector(
+        onTap: _togglePlayback,
+        behavior: HitTestBehavior.opaque,
+        child: ValueListenableBuilder<VideoPlayerValue>(
+          valueListenable: c,
+          builder: (_, value, __) => Stack(
+            fit: StackFit.expand,
+            children: [
+              _fit(player, value.size),
+              if (!value.isPlaying)
+                const Center(
+                  child: Icon(
+                    Icons.play_circle_fill_rounded,
+                    size: 52,
+                    color: Colors.white70,
+                  ),
+                ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return GestureDetector(
       onTap: _toggle,
@@ -215,15 +290,7 @@ class _VideoSurfaceState extends State<_VideoSurface> {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          FittedBox(
-            fit: widget.fit,
-            clipBehavior: Clip.hardEdge,
-            child: SizedBox(
-              width: size.width <= 0 ? 16 : size.width,
-              height: size.height <= 0 ? 9 : size.height,
-              child: VideoPlayer(c),
-            ),
-          ),
+          _fit(player, c.value.size),
           IgnorePointer(
             ignoring: !_visible,
             child: AnimatedOpacity(

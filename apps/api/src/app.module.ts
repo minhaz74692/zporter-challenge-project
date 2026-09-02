@@ -6,6 +6,7 @@ import { BadgesModule } from './badges/badges.module.js';
 import { ChallengesModule } from './challenges/challenges.module.js';
 import { CommonModule } from './common/common.module.js';
 import { ConfigModule } from './config/config.module.js';
+import { FeedModule } from './feed/feed.module.js';
 import { FirebaseModule } from './firebase/firebase.module.js';
 import { HealthModule } from './health/health.module.js';
 import { NotificationsModule } from './notifications/notifications.module.js';
@@ -31,6 +32,7 @@ import { UsersModule } from './users/users.module.js';
     ResultsModule,
     NotificationsModule,
     BadgesModule,
+    FeedModule,
     ChallengesModule,
   ],
   controllers: [AppController],

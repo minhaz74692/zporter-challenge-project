@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/util/formatters.dart';
+import '../../../../core/widgets/play_button.dart';
 import '../../domain/challenge.dart';
 import 'result_video_player.dart';
 import 'youtube_player_page.dart';
@@ -24,6 +25,8 @@ class ChallengeCoverHeader extends StatefulWidget {
     required this.challenge,
     this.coverStatus = CoverStatus.none,
     this.showMeta = true,
+    this.showDateBadge = true,
+    this.showOverflow = true,
     this.topRadius = 0,
     this.overlayFooter,
     super.key,
@@ -32,6 +35,14 @@ class ChallengeCoverHeader extends StatefulWidget {
   final Challenge challenge;
   final CoverStatus coverStatus;
   final bool showMeta;
+
+  /// Card only: the top-left start day/time (+ optional status disc). The feed's
+  /// "Public Challenge" card drops it — just the photo, headline, ingress, dots.
+  final bool showDateBadge;
+
+  /// Card only: the top-right `⋮`. The feed card carries its own in the post
+  /// header, so it suppresses this one.
+  final bool showOverflow;
 
   /// Rounds the media's top corners (the card wants this; the detail screen,
   /// where the cover is full-bleed under the app bar, leaves it 0).
@@ -49,6 +60,11 @@ class ChallengeCoverHeader extends StatefulWidget {
 class _ChallengeCoverHeaderState extends State<ChallengeCoverHeader> {
   final _controller = PageController();
   int _index = 0;
+
+  /// Index of the slide currently playing inline (a raw-video slide the viewer
+  /// tapped). `null` = every slide shows its poster + play button. YouTube never
+  /// plays here — it still opens the in-app iframe page.
+  int? _playingIndex;
 
   /// Cover proportions (width : height), Figma "360 × 284" — the same shape for
   /// image and video; the media always `BoxFit.cover`s the box.
@@ -69,6 +85,19 @@ class _ChallengeCoverHeaderState extends State<ChallengeCoverHeader> {
       curve: Curves.easeOut,
     );
   }
+
+  /// A play tap on slide [i]: raw video plays inline in place; YouTube opens the
+  /// in-app iframe page (it can't render in a `VideoPlayer`).
+  void _play(int i) {
+    final item = _items[i];
+    if (item.type == MediaKind.youtube) {
+      _openVideo(item);
+    } else {
+      setState(() => _playingIndex = i);
+    }
+  }
+
+  void _stopInline() => setState(() => _playingIndex = null);
 
   Future<void> _openVideo(MediaItem item) async {
     if (!mounted) return;
@@ -121,15 +150,42 @@ class _ChallengeCoverHeaderState extends State<ChallengeCoverHeader> {
         ? const _CoverPlaceholder()
         : PageView.builder(
             controller: _controller,
-            onPageChanged: (i) => setState(() => _index = i),
+            // Swiping to another slide stops the inline video (its controller is
+            // released when the player leaves the tree).
+            onPageChanged: (i) => setState(() {
+              _index = i;
+              _playingIndex = null;
+            }),
             itemCount: items.length,
-            itemBuilder: (context, i) => _Slide(
-              item: items[i],
-              onPlay: () => _openVideo(items[i]),
-              // The card floats its own play button above the scrim (below);
-              // the detail screen has no scrim, so the slide draws its own.
-              showPlayIcon: !showMeta,
-            ),
+            itemBuilder: (context, i) {
+              if (_playingIndex == i && items[i].type == MediaKind.video) {
+                return Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    // The cover poster stays behind the player: no black gap
+                    // while the first frame loads, and it's all that shows where
+                    // the platform can't decode video (e.g. the iOS Simulator).
+                    _CoverImage(
+                      url: items[i].resolvedThumbnail,
+                      fallbackUrl: items[i].fallbackThumbnail,
+                    ),
+                    ResultVideoPlayer(
+                      url: items[i].url,
+                      autoPlay: true,
+                      tapTogglesPlayback: true,
+                      dimBackground: false,
+                    ),
+                  ],
+                );
+              }
+              return _Slide(
+                item: items[i],
+                onPlay: () => _play(i),
+                // The card floats its own play button above the scrim (below);
+                // the detail screen has no scrim, so the slide draws its own.
+                showPlayIcon: !showMeta,
+              );
+            },
           );
 
     final dots = items.length >= 2
@@ -156,6 +212,12 @@ class _ChallengeCoverHeaderState extends State<ChallengeCoverHeader> {
                 // The detail panel is pulled up ~24px over the image bottom, so
                 // lift the dots clear of it.
                 Positioned(left: 0, right: 0, bottom: 30, child: dots),
+              if (_playingIndex != null)
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: _CollapseButton(onTap: _stopInline),
+                ),
             ],
           ),
         ),
@@ -237,19 +299,27 @@ class _ChallengeCoverHeaderState extends State<ChallengeCoverHeader> {
                 ),
               ),
             ),
-            Positioned(
-              left: 21,
-              top: 24,
-              child: _DateBadge(
-                challenge: widget.challenge,
-                status: widget.coverStatus,
+            if (widget.showDateBadge)
+              Positioned(
+                left: 21,
+                top: 24,
+                child: _DateBadge(
+                  challenge: widget.challenge,
+                  status: widget.coverStatus,
+                ),
               ),
-            ),
-            const Positioned(
-              right: 6,
-              top: 8,
-              child: Icon(Icons.more_vert, color: Colors.white, size: 22),
-            ),
+            if (_playingIndex == _index)
+              Positioned(
+                right: 6,
+                top: 6,
+                child: _CollapseButton(onTap: _stopInline),
+              )
+            else if (widget.showOverflow)
+              const Positioned(
+                right: 6,
+                top: 8,
+                child: Icon(Icons.more_vert, color: Colors.white, size: 22),
+              ),
             // Sizing child: reserve a minimum image band, then flow the overlay.
             Padding(
               padding: EdgeInsets.only(top: c.maxWidth * _imageBandFraction),
@@ -261,16 +331,16 @@ class _ChallengeCoverHeaderState extends State<ChallengeCoverHeader> {
             // Play button floats above the scrim and every overlay, centred in
             // the clear poster band, so it reads crisply and a tap plays the
             // current video in-app.
-            if (items.isNotEmpty && items[_index].type != MediaKind.image)
+            if (items.isNotEmpty &&
+                items[_index].type != MediaKind.image &&
+                _playingIndex != _index)
               Positioned(
                 // Nudged 20px below the band's centre line, per the Figma.
                 top: 24,
                 left: 0,
                 right: 0,
                 height: c.maxWidth * _imageBandFraction,
-                child: Center(
-                  child: _PlayButton(onTap: () => _openVideo(items[_index])),
-                ),
+                child: Center(child: PlayButton(onTap: () => _play(_index))),
               ),
           ],
         ),
@@ -311,8 +381,33 @@ class _Slide extends StatelessWidget {
             url: item.resolvedThumbnail,
             fallbackUrl: item.fallbackThumbnail,
           ),
-          if (showPlayIcon) const Center(child: _PlayButton()),
+          if (showPlayIcon) const Center(child: PlayButton()),
         ],
+      ),
+    );
+  }
+}
+
+/// The small dark ✕ that returns an inline-playing cover to its poster. It sits
+/// where the `⋮` overflow would be, so tapping it never collides with the
+/// video's own control layer.
+class _CollapseButton extends StatelessWidget {
+  const _CollapseButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.black.withValues(alpha: 0.55),
+      shape: const CircleBorder(),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: const Padding(
+          padding: EdgeInsets.all(6),
+          child: Icon(Icons.close_rounded, color: Colors.white, size: 18),
+        ),
       ),
     );
   }
@@ -414,40 +509,6 @@ class _CheckDisc extends StatelessWidget {
       size: 24,
     ),
   );
-}
-
-class _PlayButton extends StatelessWidget {
-  const _PlayButton({this.onTap});
-
-  /// When set, the button handles its own taps (the card uses this so the
-  /// floating button is what triggers playback); otherwise an ancestor
-  /// `GestureDetector` owns the tap.
-  final VoidCallback? onTap;
-
-  // Figma "play_circle_outline" — a 62px ring + triangle in #09E099 on a
-  // transparent fill (no disc, no drop shadow).
-  @override
-  Widget build(BuildContext context) {
-    final button = Container(
-      width: 62,
-      height: 62,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(color: AppColors.completed, width: 3),
-      ),
-      child: const Icon(
-        Icons.play_arrow_rounded,
-        color: AppColors.completed,
-        size: 34,
-      ),
-    );
-    if (onTap == null) return button;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: button,
-    );
-  }
 }
 
 class _CarouselDots extends StatelessWidget {

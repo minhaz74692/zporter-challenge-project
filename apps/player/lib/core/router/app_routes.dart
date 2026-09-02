@@ -4,6 +4,8 @@ abstract final class AppRoutes {
   static const login = '/login';
   static const signup = '/signup';
   static const home = '/';
+  static const feed = '/feed';
+  static const biography = '/biography';
   static const notifications = '/notifications';
 
   /// Challenge detail. [challengeDetailPattern] is the go_router path template;

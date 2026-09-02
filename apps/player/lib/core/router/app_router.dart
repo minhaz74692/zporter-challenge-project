@@ -7,8 +7,10 @@ import '../../features/auth/application/auth_notifier.dart';
 import '../../features/auth/domain/user.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/signup_screen.dart';
+import '../../features/biography/presentation/biography_screen.dart';
 import '../../features/challenges/presentation/challenge_detail_screen.dart';
 import '../../features/challenges/presentation/challenges_screen.dart';
+import '../../features/feed/presentation/feed_screen.dart';
 import '../../features/notifications/presentation/notifications_screen.dart';
 import '../theme/app_colors.dart';
 import 'app_routes.dart';
@@ -79,6 +81,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.home,
         builder: (_, __) => const ChallengesScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.feed,
+        builder: (_, __) => const FeedScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.biography,
+        builder: (_, __) => const BiographyScreen(),
       ),
       GoRoute(
         path: AppRoutes.notifications,
