@@ -82,6 +82,7 @@ function build() {
     submit: vi.fn(async (c: Challenge, userId: string) =>
       makeParticipant({ userId, challengeId: c.id, resultState: 'completed' }),
     ),
+    rebuildLeaderboard: vi.fn(async () => undefined),
   };
   const notifications = { notify: vi.fn(async () => undefined) };
   const badges = {

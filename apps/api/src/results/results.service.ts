@@ -62,6 +62,18 @@ export class ResultsService {
     );
   }
 
+  /**
+   * Recompute the challenge's leaderboard (verified results only). Called by
+   * `ChallengesService.verifyResult` after a controller approves or rejects.
+   */
+  async rebuildLeaderboard(challenge: Challenge): Promise<void> {
+    const strategy = this.strategies.get(challenge.resultType);
+    await this.repo.rebuildLeaderboard(
+      challenge.id,
+      this.ranker(strategy, challenge.scoringDirection),
+    );
+  }
+
   /** Score every submission, sort by the challenge's direction, assign 1..n. */
   private ranker(strategy: ResultStrategy, direction: ScoringDirection) {
     return (entries: RankInput[]): RankedEntry[] => {

@@ -86,9 +86,7 @@ class _ChallengeCoverHeaderState extends State<ChallengeCoverHeader> {
         return;
       }
       await Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (_) => YoutubePlayerPage(videoId: id),
-        ),
+        MaterialPageRoute<void>(builder: (_) => YoutubePlayerPage(videoId: id)),
       );
       return;
     }
@@ -109,7 +107,7 @@ class _ChallengeCoverHeaderState extends State<ChallengeCoverHeader> {
   /// Fraction of the cover width kept as clear media above the scrimmed content
   /// band on the card. Video covers keep more visible (down to the start/end
   /// dates) than image covers.
-  double get _imageBandFraction => widget.challenge.hasVideoCover ? 0.28 : 0.33;
+  double get _imageBandFraction => widget.challenge.hasVideoCover ? 0.35 : 0.33;
 
   @override
   Widget build(BuildContext context) {
@@ -266,14 +264,12 @@ class _ChallengeCoverHeaderState extends State<ChallengeCoverHeader> {
             if (items.isNotEmpty && items[_index].type != MediaKind.image)
               Positioned(
                 // Nudged 20px below the band's centre line, per the Figma.
-                top: 20,
+                top: 24,
                 left: 0,
                 right: 0,
                 height: c.maxWidth * _imageBandFraction,
                 child: Center(
-                  child: _PlayButton(
-                    onTap: () => _openVideo(items[_index]),
-                  ),
+                  child: _PlayButton(onTap: () => _openVideo(items[_index])),
                 ),
               ),
           ],

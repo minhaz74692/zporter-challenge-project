@@ -243,6 +243,10 @@ export class ChallengesService {
       approved,
     );
 
+    // The leaderboard ranks verified results only, so an approval adds this
+    // participant's score and a rejection takes it back off.
+    await this.results.rebuildLeaderboard(challenge);
+
     // Recognition: an approved result earns the challenge's reward badge (once).
     if (approved && !participant.awardedBadge && challenge.rewardBadgeId) {
       const badge = await this.badges.getById(challenge.rewardBadgeId);
