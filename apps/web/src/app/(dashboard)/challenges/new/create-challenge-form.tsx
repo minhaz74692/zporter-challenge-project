@@ -355,12 +355,14 @@ export function CreateChallengeForm({
                           ? p!.visibility!
                           : 'private'
                       }
-                      columns={4}
+                      columns={Math.min(shareOptions.length, 5)}
                     />
                     <p className="mt-1 pl-1 text-[11px] text-faint">
+                      Private keeps it to the people you invite. “Team” shares it
+                      with every member of your squad — no invites needed.
                       {canPublishToAll
-                        ? '“All” publishes to every player. Private keeps it to the people you invite.'
-                        : 'Private keeps it to the people you invite. Publishing to everyone (“All”) is admin-only.'}
+                        ? ' “All” publishes it to every player on the platform.'
+                        : ''}
                     </p>
                   </>
                 )}

@@ -99,6 +99,35 @@ class _ChallengeCoverHeaderState extends State<ChallengeCoverHeader> {
 
   void _stopInline() => setState(() => _playingIndex = null);
 
+  bool get _isPlayingVideo =>
+      _playingIndex != null &&
+      _playingIndex! < _items.length &&
+      _items[_playingIndex!].type == MediaKind.video;
+
+  /// The two full-bleed layers that replace the cover while a video plays: the
+  /// poster (so there's never a blank gap / it's the fallback where the platform
+  /// can't decode) and the player itself, tap-to-pause with a ✕ to collapse.
+  List<Widget> _inlinePlayerLayers() {
+    final item = _items[_playingIndex!];
+    return [
+      Positioned.fill(
+        child: _CoverImage(
+          url: item.resolvedThumbnail,
+          fallbackUrl: item.fallbackThumbnail,
+        ),
+      ),
+      Positioned.fill(
+        child: ResultVideoPlayer(
+          url: item.url,
+          autoPlay: true,
+          tapTogglesPlayback: true,
+          dimBackground: false,
+        ),
+      ),
+      Positioned(top: 8, right: 8, child: _CollapseButton(onTap: _stopInline)),
+    ];
+  }
+
   Future<void> _openVideo(MediaItem item) async {
     if (!mounted) return;
 
@@ -146,46 +175,25 @@ class _ChallengeCoverHeaderState extends State<ChallengeCoverHeader> {
       top: Radius.circular(widget.topRadius),
     );
 
+    // The inline video is layered *over* the PageView (see `_inlinePlayerLayers`),
+    // not inside it — a `PageView` child fights the tap-to-pause gesture with its
+    // own horizontal drag recogniser. While it plays, the PageView is frozen.
     final Widget media = items.isEmpty
         ? const _CoverPlaceholder()
         : PageView.builder(
             controller: _controller,
-            // Swiping to another slide stops the inline video (its controller is
-            // released when the player leaves the tree).
-            onPageChanged: (i) => setState(() {
-              _index = i;
-              _playingIndex = null;
-            }),
+            physics: _playingIndex != null
+                ? const NeverScrollableScrollPhysics()
+                : null,
+            onPageChanged: (i) => setState(() => _index = i),
             itemCount: items.length,
-            itemBuilder: (context, i) {
-              if (_playingIndex == i && items[i].type == MediaKind.video) {
-                return Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    // The cover poster stays behind the player: no black gap
-                    // while the first frame loads, and it's all that shows where
-                    // the platform can't decode video (e.g. the iOS Simulator).
-                    _CoverImage(
-                      url: items[i].resolvedThumbnail,
-                      fallbackUrl: items[i].fallbackThumbnail,
-                    ),
-                    ResultVideoPlayer(
-                      url: items[i].url,
-                      autoPlay: true,
-                      tapTogglesPlayback: true,
-                      dimBackground: false,
-                    ),
-                  ],
-                );
-              }
-              return _Slide(
-                item: items[i],
-                onPlay: () => _play(i),
-                // The card floats its own play button above the scrim (below);
-                // the detail screen has no scrim, so the slide draws its own.
-                showPlayIcon: !showMeta,
-              );
-            },
+            itemBuilder: (context, i) => _Slide(
+              item: items[i],
+              onPlay: () => _play(i),
+              // The card floats its own play button above the scrim (below);
+              // the detail screen has no scrim, so the slide draws its own.
+              showPlayIcon: !showMeta,
+            ),
           );
 
     final dots = items.length >= 2
@@ -208,16 +216,11 @@ class _ChallengeCoverHeaderState extends State<ChallengeCoverHeader> {
             fit: StackFit.expand,
             children: [
               media,
-              if (dots != null)
+              if (dots != null && !_isPlayingVideo)
                 // The detail panel is pulled up ~24px over the image bottom, so
                 // lift the dots clear of it.
                 Positioned(left: 0, right: 0, bottom: 30, child: dots),
-              if (_playingIndex != null)
-                Positioned(
-                  top: 8,
-                  right: 8,
-                  child: _CollapseButton(onTap: _stopInline),
-                ),
+              if (_isPlayingVideo) ..._inlinePlayerLayers(),
             ],
           ),
         ),
@@ -299,7 +302,7 @@ class _ChallengeCoverHeaderState extends State<ChallengeCoverHeader> {
                 ),
               ),
             ),
-            if (widget.showDateBadge)
+            if (widget.showDateBadge && !_isPlayingVideo)
               Positioned(
                 left: 21,
                 top: 24,
@@ -308,13 +311,7 @@ class _ChallengeCoverHeaderState extends State<ChallengeCoverHeader> {
                   status: widget.coverStatus,
                 ),
               ),
-            if (_playingIndex == _index)
-              Positioned(
-                right: 6,
-                top: 6,
-                child: _CollapseButton(onTap: _stopInline),
-              )
-            else if (widget.showOverflow)
+            if (widget.showOverflow && !_isPlayingVideo)
               const Positioned(
                 right: 6,
                 top: 8,
@@ -333,7 +330,7 @@ class _ChallengeCoverHeaderState extends State<ChallengeCoverHeader> {
             // current video in-app.
             if (items.isNotEmpty &&
                 items[_index].type != MediaKind.image &&
-                _playingIndex != _index)
+                !_isPlayingVideo)
               Positioned(
                 // Nudged 20px below the band's centre line, per the Figma.
                 top: 24,
@@ -342,6 +339,9 @@ class _ChallengeCoverHeaderState extends State<ChallengeCoverHeader> {
                 height: c.maxWidth * _imageBandFraction,
                 child: Center(child: PlayButton(onTap: () => _play(_index))),
               ),
+            // While a video plays it takes the whole card (over the scrim), with
+            // a ✕ to return to the cover.
+            if (_isPlayingVideo) ..._inlinePlayerLayers(),
           ],
         ),
       ),

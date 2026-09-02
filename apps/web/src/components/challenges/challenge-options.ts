@@ -18,6 +18,7 @@ export const MAIN_CATEGORIES: { value: ChallengeMainCategory; label: string }[] 
 
 export const VISIBILITIES: { value: ChallengeVisibility; label: string }[] = [
   { value: 'private', label: 'Private' },
+  { value: 'team', label: 'Team' },
   { value: 'friends', label: 'Friends' },
   { value: 'fans', label: 'Fans' },
   { value: 'all', label: 'All' },

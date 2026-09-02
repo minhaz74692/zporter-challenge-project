@@ -343,8 +343,17 @@ export class ChallengesService {
 
     const challenges = await this.repo.findManyByIds([...partByChallenge.keys()]);
     if (category === 'new') {
-      for (const publicChallenge of await this.repo.listPublic()) {
-        if (!partByChallenge.has(publicChallenge.id)) challenges.push(publicChallenge);
+      // Challenges the player can see in New without an invite: `all` (every
+      // player) + `team` challenges created by one of the player's squad-mates.
+      const squadmates = await this.teams.squadmateIds(userId);
+      const noInvite = [
+        ...(await this.repo.listPublic()),
+        ...(await this.repo.listTeamVisible()).filter((c) =>
+          squadmates.has(c.createdBy),
+        ),
+      ];
+      for (const challenge of noInvite) {
+        if (!partByChallenge.has(challenge.id)) challenges.push(challenge);
       }
     }
 
@@ -600,9 +609,11 @@ export class ChallengesService {
     switch (category) {
       case 'new':
         if (ended) return false;
+        // No participant row → it's a no-invite challenge (`all`, or a `team`
+        // challenge already filtered to the viewer's squad in `listByCategory`).
         return participant
           ? participant.inviteState === 'invited'
-          : challenge.visibility === 'all';
+          : challenge.visibility === 'all' || challenge.visibility === 'team';
       case 'active':
         return (
           !ended &&

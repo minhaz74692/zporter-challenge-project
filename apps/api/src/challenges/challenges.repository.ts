@@ -45,6 +45,12 @@ export class ChallengesRepository {
     return snap.docs.map((d) => this.fromDoc(d));
   }
 
+  /** `visibility: 'team'` challenges — the caller filters to the viewer's squad. */
+  async listTeamVisible(): Promise<Challenge[]> {
+    const snap = await this.col.where('visibility', '==', 'team').get();
+    return snap.docs.map((d) => this.fromDoc(d));
+  }
+
   /** A creator's own challenges (Figma "Yours" tab). */
   async listByCreator(userId: string): Promise<Challenge[]> {
     const snap = await this.col.where('createdBy', '==', userId).get();
