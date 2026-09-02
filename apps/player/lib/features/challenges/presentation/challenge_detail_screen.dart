@@ -147,11 +147,17 @@ class _ActionBar extends ConsumerWidget {
                 flex: 3,
                 child: OutlinedButton(
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.declined, // Figma #FF1D00
-                    side: const BorderSide(
-                      color: AppColors.declined,
-                      width: 2,
+                    // Figma "DECLINE": #FF1D00 text + 2px border, Gilroy
+                    // 14 / 700 / 17, 0 1px 3px rgba(0,0,0,0.2) shadow.
+                    foregroundColor: AppColors.declined,
+                    side: const BorderSide(color: AppColors.declined, width: 2),
+                    textStyle: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                      height: 17 / 14,
                     ),
+                    elevation: 2,
+                    shadowColor: const Color(0x33000000),
                   ),
                   onPressed: () =>
                       _run(context, notifier.decline, 'Challenge declined'),
@@ -162,6 +168,16 @@ class _ActionBar extends ConsumerWidget {
               Expanded(
                 flex: 4,
                 child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    // Match DECLINE: Gilroy 14 / 700 / 17 + the same soft shadow.
+                    textStyle: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                      height: 17 / 14,
+                    ),
+                    elevation: 2,
+                    shadowColor: const Color(0x33000000),
+                  ),
                   onPressed: () =>
                       _run(context, notifier.accept, 'Challenge accepted'),
                   child: const Text('ACCEPT'),

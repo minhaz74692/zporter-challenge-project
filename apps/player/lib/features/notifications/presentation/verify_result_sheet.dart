@@ -196,9 +196,18 @@ class _Actions extends StatelessWidget {
                 Expanded(
                   child: OutlinedButton(
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.danger,
-                      side: const BorderSide(color: AppColors.danger),
-                      minimumSize: const Size.fromHeight(46),
+                      // Figma "DECLINE": #FF1D00 text + 2px border, Gilroy
+                      // 14 / 700 / 17, 0 1px 3px rgba(0,0,0,0.2) shadow.
+                      foregroundColor: AppColors.declined,
+                      side: const BorderSide(color: AppColors.declined, width: 2),
+                      minimumSize: const Size.fromHeight(36),
+                      textStyle: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                        height: 17 / 14,
+                      ),
+                      elevation: 2,
+                      shadowColor: const Color(0x33000000),
                     ),
                     onPressed: busy ? null : onReject,
                     child: const Text('REJECT'),
@@ -207,6 +216,9 @@ class _Actions extends StatelessWidget {
                 const SizedBox(width: AppSpacing.md),
                 Expanded(
                   child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size.fromHeight(36),
+                    ),
                     onPressed: busy ? null : onVerify,
                     child: busy
                         ? const SizedBox.square(

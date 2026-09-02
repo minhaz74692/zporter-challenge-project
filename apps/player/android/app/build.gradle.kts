@@ -40,6 +40,14 @@ android {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
+
+            // This is a demo build, not a store release — skip R8 code/resource
+            // shrinking. It's the slowest part of a `--release` APK on a low-RAM
+            // machine (R8 GC-thrashes under the 1.5 GB Gradle heap here) and buys
+            // us nothing without obfuscation requirements. The APK is ~15 MB
+            // larger but still a single universal binary for every ABI.
+            isMinifyEnabled = false
+            isShrinkResources = false
         }
     }
 }
