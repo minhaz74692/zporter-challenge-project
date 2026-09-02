@@ -23,8 +23,14 @@ describe('challenge form option lists', () => {
     ]);
   });
 
-  it('offers the four visibility levels, "all" last', () => {
-    expect(VISIBILITIES.map((o) => o.value)).toEqual(['private', 'friends', 'fans', 'all']);
+  it('offers the visibility levels, "all" last', () => {
+    expect(VISIBILITIES.map((o) => o.value)).toEqual([
+      'private',
+      'team',
+      'friends',
+      'fans',
+      'all',
+    ]);
   });
 
   it('maps the five challenge locations', () => {

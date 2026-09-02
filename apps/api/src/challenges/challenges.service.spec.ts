@@ -53,6 +53,7 @@ function build() {
     findById: vi.fn(async (id: string) => challenges.find((c) => c.id === id) ?? null),
     findManyByIds: vi.fn(async (ids: string[]) => challenges.filter((c) => ids.includes(c.id))),
     listPublic: vi.fn(async () => challenges.filter((c) => c.visibility === 'all')),
+    listTeamVisible: vi.fn(async () => challenges.filter((c) => c.visibility === 'team')),
     leaderboard: vi.fn(async () => []),
     updateFields: vi.fn(async (id: string, patch: Partial<Challenge>) => {
       const c = challenges.find((x) => x.id === id);
@@ -115,6 +116,7 @@ function build() {
     // Team fan-out excludes the coach; the coach's squad for invite scoping.
     invitableMemberIds: vi.fn(async () => ['player1', 'player2', 'player3']),
     squadPlayerIds: vi.fn(async () => new Set(['player1', 'player2', 'player3'])),
+    squadmateIds: vi.fn(async () => new Set(['coach1', 'player1', 'player2', 'player3'])),
   };
   const users = {
     summaryById: vi.fn(async (id: string) => makeUserSummary({ id, displayName: `User ${id}` })),
